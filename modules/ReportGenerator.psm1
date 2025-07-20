@@ -262,8 +262,13 @@ function New-JSONReport {
         }
     }
     
-    $errorPatterns = Get-ErrorPatterns -Issues $allIssues
-    $trends = Get-TrendAnalysis -Issues $allIssues
+    if ($allIssues.Count -eq 0) {
+        $errorPatterns = @()
+        $trends = @()
+    } else {
+        $errorPatterns = Get-ErrorPatterns -Issues $allIssues
+        $trends = Get-TrendAnalysis -Issues $allIssues
+    }
     
     # Convert to PSCustomObject to ensure proper JSON serialization
     $report = [PSCustomObject]@{
