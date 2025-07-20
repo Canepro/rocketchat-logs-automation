@@ -1,16 +1,19 @@
+# Analyze-RocketChatDump.ps1 - Version 1.2.0
 <#
 .SYNOPSIS
     RocketChat Support Dump Analyzer - Main automation script for analyzing RocketChat logs and support dumps.
 
 .DESCRIPTION
     This script provides comprehensive analysis of RocketChat support dumps including:
-    - System logs analysis with error detection
-    - Server statistics review
-    - Configuration settings validation
-    - Performance metrics evaluation
-    - Security event identification
+    - System logs analysis with error detection and pattern recognition
+    - Server statistics review with enhanced metrics parsing
+    - Configuration settings validation and security analysis
+    - Performance metrics evaluation with resource usage tracking
+    - Security event identification and vulnerability assessment
     - Omnichannel settings review
     - Apps/integrations audit
+    - Professional HTML report generation with health scoring
+    - Cross-platform compatibility and production-ready features
 
 .PARAMETER DumpPath
     Path to the RocketChat support dump directory or specific dump files
@@ -35,14 +38,31 @@
 
 .NOTES
     Author: Support Engineering Team
-    Version: 1.2.0
+    Version: 1.3.0
+    Last Updated: 2025-07-20
+    Version: 1.3.0
     Requires: PowerShell 5.1 or later
+    Compatible: RocketChat 3.0+ support dumps (optimized for 7.x)
 #>
+
+#Requires -Version 5.1
 
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true, HelpMessage = "Path to RocketChat support dump directory or files")]
-    [ValidateScript({Test-Path $_ -PathType Any})]
+    [ValidateScript({
+        if (-not (Test-Path $_ -PathType Any)) {
+            throw "Path does not exist: $_"
+        }
+        if (-not (Test-Path $_ -PathType Container)) {
+            # If it's a file, check if it's a supported type
+            $extension = [System.IO.Path]::GetExtension($_).ToLower()
+            if ($extension -notin @('.json', '.tar', '.zip', '.gz')) {
+                Write-Warning "File type '$extension' may not be supported. Supported types: .json, .tar, .zip, .gz"
+            }
+        }
+        $true
+    })]
     [string]$DumpPath,
     
     [Parameter(Mandatory = $false)]
@@ -54,22 +74,141 @@ param(
     [string]$Severity = "Info",
     
     [Parameter(Mandatory = $false)]
+    [ValidateScript({
+        if ($_ -and -not (Test-Path (Split-Path $_) -PathType Container)) {
+            throw "Export directory does not exist: $(Split-Path $_)"
+        }
+        $true
+    })]
     [string]$ExportPath,
     
     [Parameter(Mandatory = $false)]
+    [ValidateScript({
+        if ($_ -and -not (Test-Path $_ -PathType Leaf)) {
+            Write-Warning "Config file does not exist: $_. Using default configuration."
+        }
+        $true
+    })]
     [string]$ConfigFile = ".\config\analysis-rules.json"
 )
 
-# Import required modules
-$ModulePath = Join-Path $PSScriptRoot "modules"
-Import-Module (Join-Path $ModulePath "RocketChatLogParser.psm1") -Force
-Import-Module (Join-Path $ModulePath "RocketChatAnalyzer.psm1") -Force
-Import-Module (Join-Path $ModulePath "ReportGenerator.psm1") -Force
+# Enhanced error handling and strict mode
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+Set-StrictMode -Version Latest
+
+# Global error handling
+trap {
+    Write-Error "Critical error occurred: $($_.Exception.Message)"
+    Write-Host "Error details:" -ForegroundColor Red
+    Write-Host "  Line: $($_.InvocationInfo.ScriptLineNumber)" -ForegroundColor Red
+    Write-Host "  Command: $($_.InvocationInfo.Line.Trim())" -ForegroundColor Red
+    if ($_.ScriptStackTrace) {
+        Write-Host "  Stack trace: $($_.ScriptStackTrace)" -ForegroundColor Red
+    }
+    exit 1
+}
+
+# Prerequisite checks
+function Test-Prerequisites {
+    Write-Verbose "Checking PowerShell version and prerequisites..."
+    
+    # Check PowerShell version
+    if ($PSVersionTable.PSVersion.Major -lt 5) {
+        throw "PowerShell 5.1 or later is required. Current version: $($PSVersionTable.PSVersion)"
+    }
+    
+    # Check if running with sufficient privileges for file access
+    try {
+        $testPath = Join-Path $env:TEMP "rocketchat_test_$(Get-Random)"
+        New-Item -Path $testPath -ItemType File -Force | Out-Null
+        Remove-Item -Path $testPath -Force
+    }
+    catch {
+        Write-Warning "Limited file system access detected. Some operations may fail."
+    }
+    
+    # Validate dump path accessibility
+    if (-not (Test-Path $DumpPath -PathType Any)) {
+        throw "Dump path does not exist or is not accessible: $DumpPath"
+    }
+    
+    # Check for required JSON handling capability
+    try {
+        $null = ConvertTo-Json @{test = "value"} -ErrorAction Stop
+        $null = ConvertFrom-Json '{"test": "value"}' -ErrorAction Stop
+    }
+    catch {
+        throw "JSON processing capabilities are not available in this PowerShell session"
+    }
+    
+    Write-Verbose "Prerequisites check completed successfully"
+}
+
+# Import required modules with error handling
+function Import-RequiredModules {
+    $ModulePath = Join-Path $PSScriptRoot "modules"
+    
+    if (-not (Test-Path $ModulePath -PathType Container)) {
+        Write-Warning "Modules directory not found: $ModulePath"
+        Write-Host "Running in fallback mode without enhanced modules..." -ForegroundColor Yellow
+        return $false
+    }
+    
+    $RequiredModules = @(
+        "RocketChatLogParser.psm1",
+        "RocketChatAnalyzer.psm1", 
+        "ReportGenerator.psm1"
+    )
+    
+    $ImportSuccess = $true
+    foreach ($Module in $RequiredModules) {
+        $ModuleFile = Join-Path $ModulePath $Module
+        
+        if (Test-Path $ModuleFile -PathType Leaf) {
+            try {
+                Import-Module $ModuleFile -Force -ErrorAction Stop
+                Write-Verbose "Successfully imported module: $Module"
+            }
+            catch {
+                Write-Warning "Failed to import module '$Module': $($_.Exception.Message)"
+                $ImportSuccess = $false
+            }
+        }
+        else {
+            Write-Warning "Module file not found: $ModuleFile"
+            $ImportSuccess = $false
+        }
+    }
+    
+    if (-not $ImportSuccess) {
+        Write-Host "Some modules failed to load. Continuing with built-in functionality..." -ForegroundColor Yellow
+    }
+    
+    return $ImportSuccess
+}
+
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
+
+try {
+    # Initialize analysis with prerequisites check
+    Write-Verbose "Initializing RocketChat Support Dump Analyzer..."
+    Test-Prerequisites
+    
+    # Import modules with fallback capability
+    $ModulesLoaded = Import-RequiredModules
+    if (-not $ModulesLoaded) {
+        Write-Warning "Running with limited functionality due to module loading issues"
+    }
 
 # Initialize analysis results
 $AnalysisResults = @{
     Timestamp = Get-Date
     DumpPath = $DumpPath
+    PowerShellVersion = $PSVersionTable.PSVersion.ToString()
+    ModulesLoaded = $ModulesLoaded
     Summary = @{
         TotalIssues = 0
         CriticalIssues = 0
@@ -122,28 +261,189 @@ function Write-Status {
 }
 
 function Get-DumpFiles {
-    param([string]$Path)
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
     
     $files = @{}
+    $FilesFound = 0
     
-    if (Test-Path $Path -PathType Container) {
-        # Directory - look for standard dump files
-        $files.Log = Get-ChildItem -Path $Path -Filter "*log*.json" | Select-Object -First 1
-        $files.Settings = Get-ChildItem -Path $Path -Filter "*settings*.json" | Select-Object -First 1
-        $files.Statistics = Get-ChildItem -Path $Path -Filter "*statistics*.json" | Select-Object -First 1
-        $files.Omnichannel = Get-ChildItem -Path $Path -Filter "*omnichannel*.json" | Select-Object -First 1
-        $files.Apps = Get-ChildItem -Path $Path -Filter "*apps*.json" | Select-Object -First 1
-    } else {
-        # Single file - determine type by name
-        $fileName = Split-Path $Path -Leaf
-        if ($fileName -match "log") { $files.Log = Get-Item $Path }
-        elseif ($fileName -match "settings") { $files.Settings = Get-Item $Path }
-        elseif ($fileName -match "statistics") { $files.Statistics = Get-Item $Path }
-        elseif ($fileName -match "omnichannel") { $files.Omnichannel = Get-Item $Path }
-        elseif ($fileName -match "apps") { $files.Apps = Get-Item $Path }
+    try {
+        if (Test-Path $Path -PathType Container) {
+            Write-Verbose "Scanning directory for dump files: $Path"
+            
+            # Enhanced file discovery with error handling
+            $FilePatterns = @{
+                'Log' = @('*log*.json')
+                'Settings' = @('*settings*.json', '*config*.json')
+                'Statistics' = @('*statistics*.json', '*stats*.json')
+                'Omnichannel' = @('*omnichannel*.json', '*omni*.json')
+                'Apps' = @('*apps*.json', '*app*.json')
+            }
+            
+            foreach ($FileType in $FilePatterns.Keys) {
+                foreach ($Pattern in $FilePatterns[$FileType]) {
+                    try {
+                        $FoundFiles = Get-ChildItem -Path $Path -Filter $Pattern -ErrorAction SilentlyContinue
+                        if ($FoundFiles) {
+                            $SelectedFile = $FoundFiles | Select-Object -First 1
+                            
+                            # Validate file accessibility and content
+                            if (Test-FileAccessibility $SelectedFile.FullName) {
+                                $files[$FileType] = $SelectedFile
+                                $FilesFound++
+                                Write-Verbose "Found $FileType file: $($SelectedFile.Name) ($(Format-FileSize $SelectedFile.Length))"
+                                break  # Move to next file type once found
+                            }
+                        }
+                    }
+                    catch {
+                        Write-Warning "Error searching for $FileType files with pattern '$Pattern': $($_.Exception.Message)"
+                    }
+                }
+            }
+        } 
+        elseif (Test-Path $Path -PathType Leaf) {
+            Write-Verbose "Processing single file: $Path"
+            
+            # Validate single file
+            if (-not (Test-FileAccessibility $Path)) {
+                throw "File is not accessible or readable: $Path"
+            }
+            
+            # Determine file type by name and optionally by content
+            $fileName = Split-Path $Path -Leaf
+            $fileItem = Get-Item $Path
+            
+            switch -Regex ($fileName.ToLower()) {
+                'log' { 
+                    $files.Log = $fileItem
+                    $FilesFound++
+                }
+                'settings|config' { 
+                    $files.Settings = $fileItem
+                    $FilesFound++
+                }
+                'statistics|stats' { 
+                    $files.Statistics = $fileItem
+                    $FilesFound++
+                }
+                'omnichannel|omni' { 
+                    $files.Omnichannel = $fileItem
+                    $FilesFound++
+                }
+                'apps|app' { 
+                    $files.Apps = $fileItem
+                    $FilesFound++
+                }
+                default {
+                    Write-Warning "Unable to determine file type from name: $fileName"
+                    # Try to determine by content structure if it's JSON
+                    if ($fileName -match '\.json$') {
+                        $ContentType = Get-JsonContentType $Path
+                        if ($ContentType) {
+                            $files[$ContentType] = $fileItem
+                            $FilesFound++
+                            Write-Verbose "Determined file type by content: $ContentType"
+                        }
+                        else {
+                            $files.Unknown = $fileItem
+                            $FilesFound++
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            throw "Path is neither a file nor directory: $Path"
+        }
+        
+        if ($FilesFound -eq 0) {
+            Write-Warning "No supported dump files found in: $Path"
+            Write-Host "Supported file patterns:" -ForegroundColor Yellow
+            Write-Host "  Logs: *log*.json" -ForegroundColor Gray
+            Write-Host "  Settings: *settings*.json, *config*.json" -ForegroundColor Gray
+            Write-Host "  Statistics: *statistics*.json, *stats*.json" -ForegroundColor Gray
+            Write-Host "  Omnichannel: *omnichannel*.json, *omni*.json" -ForegroundColor Gray
+            Write-Host "  Apps: *apps*.json, *app*.json" -ForegroundColor Gray
+        }
+        else {
+            Write-Verbose "Found $FilesFound dump file(s) for analysis"
+        }
+    }
+    catch {
+        Write-Error "Error discovering dump files: $($_.Exception.Message)"
+        throw
     }
     
     return $files
+}
+
+# Helper function to test file accessibility
+function Test-FileAccessibility {
+    param([string]$FilePath)
+    
+    try {
+        # Test if file exists and is readable
+        if (-not (Test-Path $FilePath -PathType Leaf)) {
+            return $false
+        }
+        
+        # Test read access
+        $null = Get-Content $FilePath -TotalCount 1 -ErrorAction Stop
+        
+        # For JSON files, test basic JSON validity
+        if ($FilePath -match '\.json$') {
+            try {
+                $testContent = Get-Content $FilePath -Raw -ErrorAction Stop
+                if ($testContent) {
+                    $null = ConvertFrom-Json $testContent -ErrorAction Stop
+                }
+            }
+            catch {
+                Write-Warning "JSON file may be corrupted or incomplete: $FilePath"
+                return $false
+            }
+        }
+        
+        return $true
+    }
+    catch {
+        Write-Warning "File accessibility test failed for: $FilePath - $($_.Exception.Message)"
+        return $false
+    }
+}
+
+# Helper function to get JSON content type
+function Get-JsonContentType {
+    param([string]$FilePath)
+    
+    try {
+        $content = Get-Content $FilePath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+        
+        # Check for specific content patterns
+        if ($content.logs -or $content.queue) { return 'Log' }
+        if ($content.settings -or ($content.PSObject.Properties.Name -match 'API_' -or $content.PSObject.Properties.Name -match '_')-contains $true) { return 'Settings' }
+        if ($content.totalUsers -or $content.totalMessages) { return 'Statistics' }
+        if ($content.omnichannel -or $content.livechat) { return 'Omnichannel' }
+        if ($content.apps -or $content.marketplace) { return 'Apps' }
+        
+        return $null
+    }
+    catch {
+        return $null
+    }
+}
+
+# Helper function to format file sizes
+function Format-FileSize {
+    param([long]$Size)
+    
+    if ($Size -gt 1GB) { return "{0:N2} GB" -f ($Size / 1GB) }
+    elseif ($Size -gt 1MB) { return "{0:N2} MB" -f ($Size / 1MB) }
+    elseif ($Size -gt 1KB) { return "{0:N2} KB" -f ($Size / 1KB) }
+    else { return "$Size bytes" }
 }
 
 try {
@@ -254,7 +554,17 @@ try {
     Write-Status "RocketChat dump analysis completed successfully" "Success"
     
 } catch {
-    Write-Status "Error during analysis: $($_.Exception.Message)" "Critical"
-    Write-Status "Stack trace: $($_.ScriptStackTrace)" "Error"
+    Write-Status "Critical error during analysis: $($_.Exception.Message)" "Critical"
+    Write-Host "Error Details:" -ForegroundColor Red
+    Write-Host "  Script: $($_.InvocationInfo.ScriptName)" -ForegroundColor Red
+    Write-Host "  Line: $($_.InvocationInfo.ScriptLineNumber)" -ForegroundColor Red
+    Write-Host "  Command: $($_.InvocationInfo.Line.Trim())" -ForegroundColor Red
+    if ($_.ScriptStackTrace) {
+        Write-Host "  Stack trace: $($_.ScriptStackTrace)" -ForegroundColor Red
+    }
     exit 1
+} finally {
+    # Cleanup any temporary resources
+    Write-Verbose "Cleaning up resources..."
+    # Add any cleanup code here if needed
 }
