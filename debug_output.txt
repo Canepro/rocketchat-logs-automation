@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RocketChat Support Dump Analysis Report</title>
+    <style>
+        /* Modern gradient background and typography */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: rgba(255,255,255,0.95); 
+            padding: 30px; 
+            border-radius: 15px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        /* Enhanced header with gradient */
+        .header { 
+            text-align: center; 
+            color: #333; 
+            background: linear-gradient(90deg, #007acc, #00a8ff);
+            margin: -30px -30px 30px -30px;
+            padding: 40px 30px;
+            border-radius: 15px 15px 0 0;
+            color: white;
+        }
+        .header h1 { 
+            color: white; 
+            margin: 0; 
+            font-size: 2.5em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        /* Collapsible sections with animation */
+        .section { 
+            margin-bottom: 30px; 
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .section h2 { 
+            color: #333; 
+            border-left: 4px solid #007acc; 
+            padding: 15px;
+            margin: 0;
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+        .section h2:hover {
+            background: linear-gradient(90deg, #e9ecef, #dee2e6);
+            transform: translateX(5px);
+        }
+        .section-content {
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-top: none;
+        }
+        .collapsible .section-content {
+            display: none;
+        }
+        
+        /* Enhanced health score cards */
+        .health-score { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 20px; 
+            margin: 20px 0; 
+        }
+        .score-card { 
+            background: linear-gradient(135deg, #f8f9fa, #ffffff); 
+            padding: 25px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .score-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+        .score-excellent { 
+            background: linear-gradient(135deg, #d4edda, #c3e6cb); 
+            border-color: #28a745;
+        }
+        .score-good { 
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7); 
+            border-color: #ffc107;
+        }
+        .score-poor { 
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb); 
+            border-color: #dc3545;
+        }
+        
+        /* Enhanced issue styling */
+        .issue-list { list-style: none; padding: 0; }
+        .issue-item { 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 8px; 
+            border-left: 4px solid;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .issue-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+        .issue-critical { 
+            background: linear-gradient(90deg, #f8d7da, #f5c6cb); 
+            border-left-color: #dc3545; 
+        }
+        .issue-error { 
+            background: linear-gradient(90deg, #f8d7da, #f5c6cb); 
+            border-left-color: #dc3545; 
+        }
+        .issue-warning { 
+            background: linear-gradient(90deg, #fff3cd, #ffeaa7); 
+            border-left-color: #ffc107; 
+        }
+        .issue-info { 
+            background: linear-gradient(90deg, #d1ecf1, #bee5eb); 
+            border-left-color: #17a2b8; 
+        }
+        
+        /* Enhanced grid and cards */
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 20px; 
+            margin: 20px 0; 
+        }
+        .stat-card { 
+            background: linear-gradient(135deg, #ffffff, #f8f9fa); 
+            padding: 20px; 
+            border-radius: 12px; 
+            border: 1px solid #dee2e6;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+        }
+        
+        /* Enhanced styling elements */
+        .timestamp { color: rgba(255,255,255,0.9); font-size: 1.1em; font-weight: 300; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        th, td { padding: 15px; text-align: left; }
+        th { 
+            background: linear-gradient(90deg, #007acc, #0056b3); 
+            color: white;
+            font-weight: 600;
+        }
+        td { border-bottom: 1px solid #dee2e6; }
+        
+        /* Premium recommendations section */
+        .recommendations { 
+            background: linear-gradient(135deg, #e7f3ff, #d4edda); 
+            padding: 25px; 
+            border-radius: 12px; 
+            border-left: 6px solid #007acc;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        /* Responsive design improvements */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 20px; }
+            .header { margin: -20px -20px 20px -20px; padding: 30px 20px; }
+            .header h1 { font-size: 2em; }
+            .health-score { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+        
+        /* Loading animation and modern touches */
+        .fade-in {
+            animation: fadeIn 0.8s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Status badges with better visual indicators */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-excellent { background: #28a745; color: white; }
+        .status-good { background: #ffc107; color: #333; }
+        .status-poor { background: #dc3545; color: white; }
+        
+        /* Executive summary styling */
+        .executive-summary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+        .executive-summary h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.5em;
+        }
+    </style>
+    <script>
+        function toggleSection(element) {
+            const content = element.nextElementSibling;
+            const section = element.parentElement;
+            
+            if (section.classList.contains('collapsible')) {
+                section.classList.remove('collapsible');
+                content.style.display = 'block';
+                element.innerHTML = element.innerHTML.replace('▶', '▼');
+            } else {
+                section.classList.add('collapsible');
+                content.style.display = 'none';
+                element.innerHTML = element.innerHTML.replace('▼', '▶');
+            }
+        }
+        
+        // Add fade-in animation on load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('.container').classList.add('fade-in');
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 RocketChat Support Dump Analysis Report</h1>
+            <p class="timestamp">Generated on July 20, 2025 at 19:43:22</p>
+            <p><strong>Analysis Path:</strong> .\test-dump\7.8.0-support-dump _1</p>
+        </div>
+        
+        <!-- Executive Summary -->
+        <div class="executive-summary">
+            <h3>📋 Executive Summary</h3>
+            <p><strong>System Health:</strong> <span class="status-badge status-excellent">100% EXCELLENT</span></p>
+            <p><strong>Total Issues Found:</strong> 0 
+            
+            </p>
+            <p><strong>Recommended Action:</strong> 🎉 System is performing optimally</p>
+        </div>
+        
+        <div class="section">
+            <h2 onclick="toggleSection(this)">📊 Health Overview ▼</h2>
+            <div class="section-content">
+                <div class="health-score">
+                    <div class="score-card score-excellent">
+                        <h3>🎯 Overall Health</h3>
+                        <div style="font-size: 3em; font-weight: bold; margin: 10px 0;">100%</div>
+                        <span class="status-badge status-excellent">
+                            EXCELLENT
+                        </span>
+                    </div>
+                    <div class="score-card">
+                        <h3>📊 Total Issues</h3>
+                        <div style="font-size: 3em; font-weight: bold; margin: 10px 0; color: #28a745;">0</div>
+                        <small style="color: #6c757d;">All severity levels</small>
+                    </div>
+                    <div class="score-card score-excellent">
+                        <h3>🚨 Critical Issues</h3>
+                        <div style="font-size: 3em; font-weight: bold; margin: 10px 0; color: #dc3545;">0</div>
+                        <small style="color: #6c757d;">Requiring immediate attention</small>
+                    </div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>🏥 Component Health</h4>
+                        <ul style="list-style: none; padding: 0; margin: 0;">
+                            <li style='color: #28a745; margin: 8px 0; display: flex; justify-content: space-between; align-items: center;'>
+                                <span>🟢 Security</span> 
+                                <span style='font-weight: bold; font-size: 1.1em;'>100%</span>
+                            </li>                             <li style='color: #28a745; margin: 8px 0; display: flex; justify-content: space-between; align-items: center;'>
+                                <span>🟢 Settings</span> 
+                                <span style='font-weight: bold; font-size: 1.1em;'>100%</span>
+                            </li>                             <li style='color: #28a745; margin: 8px 0; display: flex; justify-content: space-between; align-items: center;'>
+                                <span>🟢 Logs</span> 
+                                <span style='font-weight: bold; font-size: 1.1em;'>100%</span>
+                            </li>                             <li style='color: #28a745; margin: 8px 0; display: flex; justify-content: space-between; align-items: center;'>
+                                <span>🟢 Performance</span> 
+                                <span style='font-weight: bold; font-size: 1.1em;'>100%</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="stat-card">
+                        <h4>📈 Issues by Severity</h4>
+                        <ul style="list-style: none; padding: 0; margin: 0;">
+                            <li style="color: #dc3545; margin: 8px 0; display: flex; justify-content: space-between; align-items: center;">
+                                <span>🚨 Critical</span> 
+                                <span style="font-weight: bold; font-size: 1.2em;">0</span>
+                            </li>
+                            <li style="color: #dc3545; margin: 8px 0; display: flex; justify-content: space-between; align-items: center;">
+                                <span>❌ Error</span> 
+                                <span style="font-weight: bold; font-size: 1.2em;">0</span>
+                            </li>
+                            <li style="color: #ffc107; margin: 8px 0; display: flex; justify-content: space-between; align-items: center;">
+                                <span>⚠️ Warning</span> 
+                                <span style="font-weight: bold; font-size: 1.2em;">0</span>
+                            </li>
+                            <li style="color: #17a2b8; margin: 8px 0; display: flex; justify-content: space-between; align-items: center;">
+                                <span>ℹ️ Info</span> 
+                                <span style="font-weight: bold; font-size: 1.2em;">0</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>        <div class="section">
+            <h2>🔒 Security Analysis</h2>
+            <div class="score-card score-excellent">
+                <h3>Security Score: 100%</h3>
+            </div>
+            
+
+        </div>        <div class="section">
+            <h2 onclick="toggleSection(this)">💡 Recommendations & Action Items ▼</h2>
+            <div class="section-content">
+                <div class="recommendations">
+                    <h3>🎯 Priority Actions</h3>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        <li style='margin: 10px 0; padding: 5px 0;'>💡 Excellent: System is running optimally</li>
+
+                    </ul>
+                    
+                    <h3 style="margin-top: 25px;">📋 Next Steps</h3>
+                    <div style="background: rgba(255,255,255,0.8); padding: 15px; border-radius: 8px; margin-top: 10px;">
+                        <ol style="margin: 0; padding-left: 20px;">
+
+
+
+                            <li style="margin: 8px 0; color: #17a2b8;">Schedule regular health checks and monitoring</li>
+                            <li style="margin: 8px 0; color: #28a745;">Document any changes made for future reference</li>
+                        </ol>
+                    </div>
+                    
+                    
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 onclick="toggleSection(this)">📋 Analysis Summary & Technical Details ▶</h2>
+            <div class="section-content" style="display: none;">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>📊 Analysis Coverage</h4>
+                        <p><strong>Components Analyzed:</strong> 9</p>
+                        <p><strong>Data Sources:</strong> Logs, Settings, Statistics, Security</p>
+                        <p><strong>Analysis Depth:</strong> Comprehensive</p>
+                        <p><strong>Report Format:</strong> Executive HTML Report</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>🛠️ Support Information</h4>
+                        <p><strong>Tool Version:</strong> RocketChat Log Analyzer v1.2.0</p>
+                        <p><strong>Analysis Date:</strong> 2025-07-20 19:43:22</p>
+                        <p><strong>Report Type:</strong> Professional Health Assessment</p>
+                        <p><strong>Export Formats:</strong> HTML, JSON, CSV, Console</p>
+                    </div>
+                </div>
+                
+                <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #007acc;">
+                    <h4 style="margin: 0 0 10px 0;">📞 Need Additional Support?</h4>
+                    <p style="margin: 0;">For complex issues or detailed analysis, consider:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Exporting detailed JSON report for technical teams</li>
+                        <li>Scheduling a consultation with RocketChat support</li>
+                        <li>Running additional diagnostics during maintenance windows</li>
+                        <li>Setting up continuous monitoring and alerting</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
