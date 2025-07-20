@@ -1,0 +1,47 @@
+{
+  "users": [
+    {
+      "_id": "user_special",
+      "username": "test.user+special@domain.com",
+      "name": "Test User (Special: éñ中文)",
+      "emails": [{"address": "test+special@domain.com", "verified": true}],
+      "roles": ["user"],
+      "status": "online",
+      "active": true,
+      "type": "user",
+      "createdAt": {"$date": "2023-01-15T08:00:00.000Z"}
+    }
+  ],
+  "channels": [
+    {
+      "_id": "channel001",
+      "name": "general",
+      "fname": "general",
+      "description": "General discussion channel",
+      "broadcast": false,
+      "encrypted": false,
+      "type": "c",
+      "createdAt": {"$date": "2023-01-15T08:00:00.000Z"},
+      "msgs": 1250,
+      "usersCount": 3,
+      "default": true
+    }
+  ],
+  "messages": [
+    {
+      "_id": "msg_special",
+      "rid": "channel001",
+      "msg": "Message with special chars: éñüàáç中文日本語🚀✅❌",
+      "ts": {"$date": "2023-01-15T08:05:00.000Z"},
+      "u": {
+        "_id": "user_special",
+        "username": "test.user+special@domain.com",
+        "name": "Test User (Special: éñ中文)"
+      },
+      "_updatedAt": {"$date": "2023-01-15T08:05:00.000Z"},
+      "urls": [],
+      "mentions": [],
+      "channels": []
+    }
+  ]
+}
