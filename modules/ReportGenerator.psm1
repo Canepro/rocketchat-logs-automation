@@ -239,6 +239,47 @@ function Write-ConsoleReport {
     Write-Host "Report generated at: $(Get-Date)" -ForegroundColor Gray
 }
 
+function ConvertTo-SerializableObject {
+    <#
+    .SYNOPSIS
+        Converts hashtables and complex objects to PSCustomObjects for JSON serialization.
+    
+    .PARAMETER InputObject
+        The object to convert
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        $InputObject
+    )
+    
+    if ($InputObject -is [hashtable]) {
+        $newObject = [PSCustomObject]@{}
+        foreach ($key in $InputObject.Keys) {
+            $value = if ($InputObject[$key] -is [hashtable] -or $InputObject[$key] -is [array]) {
+                ConvertTo-SerializableObject -InputObject $InputObject[$key]
+            } else {
+                $InputObject[$key]
+            }
+            $newObject | Add-Member -MemberType NoteProperty -Name $key -Value $value
+        }
+        return $newObject
+    }
+    elseif ($InputObject -is [array]) {
+        $newArray = @()
+        foreach ($item in $InputObject) {
+            $newArray += if ($item -is [hashtable] -or $item -is [array]) {
+                ConvertTo-SerializableObject -InputObject $item
+            } else {
+                $item
+            }
+        }
+        return $newArray
+    }
+    else {
+        return $InputObject
+    }
+}
+
 function New-JSONReport {
     <#
     .SYNOPSIS
@@ -263,16 +304,29 @@ function New-JSONReport {
     }
     
     if ($allIssues.Count -eq 0) {
-        $errorPatterns = @()
-        $trends = @()
+        $errorPatterns = @{}
+        $trends = @{}
     } else {
         $errorPatterns = Get-ErrorPatterns -Issues $allIssues
         $trends = Get-TrendAnalysis -Issues $allIssues
     }
     
-    # Convert to PSCustomObject to ensure proper JSON serialization
-    $report = [PSCustomObject]@{
-        metadata = [PSCustomObject]@{
+    # Get security and performance insights
+    $securityAnalysis = if ($Results.SettingsAnalysis) {
+        Get-SecurityAnalysis -Settings $Results.SettingsAnalysis -Issues $allIssues
+    } else {
+        @{}
+    }
+    
+    $performanceInsights = if ($Results.StatisticsAnalysis) {
+        Get-PerformanceInsights -Statistics $Results.StatisticsAnalysis -Config @{ PerformanceThresholds = @{} }
+    } else {
+        @{}
+    }
+    
+    # Create report structure and convert all hashtables to PSCustomObjects
+    $report = @{
+        metadata = @{
             reportType = "RocketChat Support Dump Analysis"
             version = "1.0.0"
             generatedAt = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -280,30 +334,25 @@ function New-JSONReport {
         }
         healthScore = $healthScore
         summary = $Results.Summary
-        analysis = [PSCustomObject]@{
+        analysis = @{
             logs = $Results.LogAnalysis
             settings = $Results.SettingsAnalysis
             statistics = $Results.StatisticsAnalysis
             omnichannel = $Results.OmnichannelAnalysis
             apps = $Results.AppsAnalysis
         }
-        insights = [PSCustomObject]@{
+        insights = @{
             errorPatterns = $errorPatterns
             trends = $trends
+            security = $securityAnalysis
+            performance = $performanceInsights
         }
     }
     
-    # Add security analysis if settings are available
-    if ($Results.SettingsAnalysis) {
-        $report.insights | Add-Member -MemberType NoteProperty -Name "security" -Value (Get-SecurityAnalysis -Settings $Results.SettingsAnalysis -Issues $allIssues)
-    }
+    # Convert the entire report structure to be JSON-serializable
+    $serializableReport = ConvertTo-SerializableObject -InputObject $report
     
-    # Add performance insights if statistics are available
-    if ($Results.StatisticsAnalysis) {
-        $report.insights | Add-Member -MemberType NoteProperty -Name "performance" -Value (Get-PerformanceInsights -Statistics $Results.StatisticsAnalysis -Config @{ PerformanceThresholds = @{} })
-    }
-    
-    return ($report | ConvertTo-Json -Depth 10 -WarningAction SilentlyContinue)
+    return ($serializableReport | ConvertTo-Json -Depth 10 -WarningAction SilentlyContinue)
 }
 
 function New-CSVReport {
