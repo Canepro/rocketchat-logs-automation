@@ -80,6 +80,9 @@ function Invoke-LogAnalysis {
             $logEntries = $logContent
         } elseif ($logContent.logs) {
             $logEntries = $logContent.logs
+        } elseif ($logContent.queue) {
+            # Handle RocketChat 7.8.0+ support dump format with queue array
+            $logEntries = $logContent.queue
         } else {
             $logEntries = @($logContent)
         }
@@ -88,9 +91,34 @@ function Invoke-LogAnalysis {
         Write-Verbose "Processing $($logEntries.Count) log entries"
         
         foreach ($entry in $logEntries) {
-            # Parse timestamp
-            if ($entry.timestamp -or $entry.ts -or $entry.time) {
+            # Handle RocketChat 7.8.0+ format where log data is in 'string' field
+            $actualLogEntry = $entry
+            $timestamp = $null
+            $level = "info"
+            $message = ""
+            
+            if ($entry.string) {
+                # RocketChat 7.8.0+ format: parse the JSON string to get actual log entry
+                try {
+                    $parsedLogEntry = $entry.string | ConvertFrom-Json
+                    $actualLogEntry = $parsedLogEntry
+                    $timestamp = $entry.ts ?? $parsedLogEntry.time ?? $parsedLogEntry.timestamp
+                    $level = $parsedLogEntry.level ?? "info"
+                    $message = $parsedLogEntry.msg ?? $parsedLogEntry.message ?? ""
+                } catch {
+                    # If parsing fails, treat the string as the message
+                    $timestamp = $entry.ts
+                    $message = $entry.string
+                }
+            } else {
+                # Standard format
                 $timestamp = $entry.timestamp ?? $entry.ts ?? $entry.time
+                $level = $entry.level ?? $entry.severity ?? "info"
+                $message = $entry.message ?? $entry.msg ?? $entry.text ?? ""
+            }
+            
+            # Parse timestamp
+            if ($timestamp) {
                 try {
                     $parsedTime = [DateTime]::Parse($timestamp)
                     if (-not $results.TimeRange.Start -or $parsedTime -lt $results.TimeRange.Start) {
@@ -104,12 +132,31 @@ function Invoke-LogAnalysis {
                 }
             }
             
-            # Determine log level
-            $level = $entry.level ?? $entry.severity ?? "info"
-            $message = $entry.message ?? $entry.msg ?? $entry.text ?? ""
+            # Handle numeric log levels (RocketChat uses 20=info, 30=warn, 40=error, 50=fatal)
+            if ($level -is [int] -or $level -is [int64]) {
+                switch ([int]$level) {
+                    { $_ -ge 50 } { $level = "Critical" }
+                    { $_ -ge 40 } { $level = "Error" }
+                    { $_ -ge 30 } { $level = "Warning" }
+                    default { $level = "Info" }
+                }
+            } elseif ($level -is [string] -and $level -match '^\d+$') {
+                # Handle string representation of numbers
+                $numLevel = [int]$level
+                switch ($numLevel) {
+                    { $_ -ge 50 } { $level = "Critical" }
+                    { $_ -ge 40 } { $level = "Error" }
+                    { $_ -ge 30 } { $level = "Warning" }
+                    default { $level = "Info" }
+                }
+            }
+            
+            # Convert to string for consistent processing
+            $level = $level.ToString()
             
             # Count by level
             switch ($level.ToLower()) {
+                "critical" { $results.Summary.ErrorCount++ }
                 "error" { $results.Summary.ErrorCount++ }
                 "warn" { $results.Summary.WarningCount++ }
                 "warning" { $results.Summary.WarningCount++ }
@@ -125,7 +172,8 @@ function Invoke-LogAnalysis {
                         Message = $message
                         Pattern = $pattern
                         Timestamp = $timestamp
-                        Context = $entry
+                        Context = $actualLogEntry
+                        Id = $entry.id ?? "unknown"
                     }
                     
                     # Track pattern frequency
@@ -145,7 +193,8 @@ function Invoke-LogAnalysis {
                         Message = $message
                         Pattern = $pattern
                         Timestamp = $timestamp
-                        Context = $entry
+                        Context = $actualLogEntry
+                        Id = $entry.id ?? "unknown"
                     }
                 }
             }
@@ -159,7 +208,8 @@ function Invoke-LogAnalysis {
                         Message = $message
                         Pattern = $pattern
                         Timestamp = $timestamp
-                        Context = $entry
+                        Context = $actualLogEntry
+                        Id = $entry.id ?? "unknown"
                     }
                 }
             }
