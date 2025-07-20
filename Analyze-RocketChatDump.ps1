@@ -1,16 +1,19 @@
+# Analyze-RocketChatDump.ps1 - Version 1.2.0
 <#
 .SYNOPSIS
     RocketChat Support Dump Analyzer - Main automation script for analyzing RocketChat logs and support dumps.
 
 .DESCRIPTION
     This script provides comprehensive analysis of RocketChat support dumps including:
-    - System logs analysis with error detection
-    - Server statistics review
-    - Configuration settings validation
-    - Performance metrics evaluation
-    - Security event identification
+    - System logs analysis with error detection and pattern recognition
+    - Server statistics review with enhanced metrics parsing
+    - Configuration settings validation and security analysis
+    - Performance metrics evaluation with resource usage tracking
+    - Security event identification and vulnerability assessment
     - Omnichannel settings review
     - Apps/integrations audit
+    - Professional HTML report generation with health scoring
+    - Cross-platform compatibility and production-ready features
 
 .PARAMETER DumpPath
     Path to the RocketChat support dump directory or specific dump files
@@ -36,7 +39,9 @@
 .NOTES
     Author: Support Engineering Team
     Version: 1.2.0
+    Last Updated: 2025-07-20
     Requires: PowerShell 5.1 or later
+    Compatible: RocketChat 3.0+ support dumps (optimized for 7.x)
 #>
 
 [CmdletBinding()]

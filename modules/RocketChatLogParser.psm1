@@ -274,6 +274,9 @@ function Invoke-StatisticsAnalysis {
         ServerInfo = @{}
         PerformanceMetrics = @{}
         ResourceUsage = @{}
+        UserMetrics = @{}
+        MessageMetrics = @{}
+        PlatformInfo = @{}
     }
     
     try {
@@ -285,58 +288,168 @@ function Invoke-StatisticsAnalysis {
         
         $statsContent = Get-Content $StatisticsFile -Raw | ConvertFrom-Json
         
-        # Extract server information
+        # Extract server information - handle different dump formats
         if ($statsContent.version) {
             $results.ServerInfo.Version = $statsContent.version
+        } elseif ($statsContent.rocketChatVersion) {
+            $results.ServerInfo.Version = $statsContent.rocketChatVersion
         }
+        
         if ($statsContent.uniqueId) {
             $results.ServerInfo.UniqueId = $statsContent.uniqueId
         }
+        
         if ($statsContent.installedAt) {
             $results.ServerInfo.InstalledAt = $statsContent.installedAt
+        } elseif ($statsContent.createdAt) {
+            $results.ServerInfo.InstalledAt = $statsContent.createdAt
         }
         
-        # Extract performance metrics
-        if ($statsContent.statistics) {
-            $stats = $statsContent.statistics
-            
-            # Memory usage
-            if ($stats.process) {
-                $results.PerformanceMetrics.Memory = @{
-                    Used = $stats.process.memory?.rss
-                    Heap = $stats.process.memory?.heapUsed
-                    External = $stats.process.memory?.external
-                }
-                
-                # Check memory thresholds
-                if ($stats.process.memory?.rss -gt 1000000000) { # 1GB
-                    $results.Issues += @{
-                        Type = "Performance"
-                        Severity = "Warning"
-                        Message = "High memory usage detected: $($stats.process.memory.rss / 1000000)MB"
-                        Metric = "Memory"
-                        Value = $stats.process.memory.rss
+        # Extract deployment information
+        if ($statsContent.deployment) {
+            $results.PlatformInfo = @{
+                DeploymentType = $statsContent.deployment.type ?? "Unknown"
+                Platform = $statsContent.deployment.platform ?? "Unknown"
+                OS = $statsContent.deployment.os ?? "Unknown"
+                NodeVersion = $statsContent.deployment.nodeVersion ?? "Unknown"
+                DatabaseType = $statsContent.deployment.databaseType ?? "Unknown"
+            }
+        }
+        
+        # Extract performance metrics - enhanced for RocketChat 7.x
+        $stats = $statsContent.statistics ?? $statsContent
+        
+        if ($stats) {
+            # Memory usage analysis
+            if ($stats.process -or $stats.memory) {
+                $memoryInfo = $stats.process?.memory ?? $stats.memory
+                if ($memoryInfo) {
+                    $results.PerformanceMetrics.Memory = @{
+                        Used = [int64]($memoryInfo.rss ?? $memoryInfo.used ?? 0)
+                        Heap = [int64]($memoryInfo.heapUsed ?? $memoryInfo.heap ?? 0)
+                        External = [int64]($memoryInfo.external ?? 0)
+                        ArrayBuffers = [int64]($memoryInfo.arrayBuffers ?? 0)
+                    }
+                    
+                    # Enhanced memory threshold checking
+                    $memoryMB = [math]::Round($results.PerformanceMetrics.Memory.Used / 1024 / 1024, 2)
+                    if ($memoryMB -gt 4096) {
+                        $results.Issues += @{
+                            Type = "Performance"
+                            Severity = "Critical"
+                            Message = "Very high memory usage detected: ${memoryMB}MB (>4GB)"
+                            Metric = "Memory"
+                            Value = $memoryMB
+                        }
+                    } elseif ($memoryMB -gt 2048) {
+                        $results.Issues += @{
+                            Type = "Performance"
+                            Severity = "Warning"
+                            Message = "High memory usage detected: ${memoryMB}MB"
+                            Metric = "Memory"
+                            Value = $memoryMB
+                        }
                     }
                 }
             }
             
-            # User statistics
-            if ($stats.totalUsers) {
-                $results.PerformanceMetrics.Users = @{
-                    Total = $stats.totalUsers
-                    Online = $stats.onlineUsers
-                    Away = $stats.awayUsers
-                    Offline = $stats.offlineUsers
+            # User statistics - enhanced parsing
+            $userStats = @{
+                Total = [int]($stats.totalUsers ?? $stats.users?.total ?? 0)
+                Online = [int]($stats.onlineUsers ?? $stats.users?.online ?? 0)
+                Away = [int]($stats.awayUsers ?? $stats.users?.away ?? 0)
+                Offline = [int]($stats.offlineUsers ?? $stats.users?.offline ?? 0)
+                Active = [int]($stats.activeUsers ?? $stats.users?.active ?? 0)
+            }
+            
+            $results.UserMetrics = $userStats
+            
+            # User load analysis
+            if ($userStats.Total -gt 0) {
+                $onlineRatio = [math]::Round(($userStats.Online / $userStats.Total) * 100, 2)
+                $results.UserMetrics.OnlinePercentage = $onlineRatio
+                
+                if ($userStats.Online -gt 5000) {
+                    $results.Issues += @{
+                        Type = "Performance"
+                        Severity = "Warning"
+                        Message = "Very high user load: $($userStats.Online) users online"
+                        Metric = "UserLoad"
+                        Value = $userStats.Online
+                    }
+                } elseif ($userStats.Online -gt 1000) {
+                    $results.Issues += @{
+                        Type = "Performance"
+                        Severity = "Info"
+                        Message = "High user load detected: $($userStats.Online) users online"
+                        Metric = "UserLoad"
+                        Value = $userStats.Online
+                    }
                 }
             }
             
-            # Message statistics
-            if ($stats.totalMessages) {
-                $results.PerformanceMetrics.Messages = @{
-                    Total = $stats.totalMessages
-                    Channels = $stats.totalChannels
-                    PrivateGroups = $stats.totalPrivateGroups
-                    DirectMessages = $stats.totalDirect
+            # Message statistics - enhanced parsing
+            $messageStats = @{
+                Total = [int64]($stats.totalMessages ?? $stats.messages?.total ?? 0)
+                Channels = [int]($stats.totalChannels ?? $stats.channels?.total ?? 0)
+                PrivateGroups = [int]($stats.totalPrivateGroups ?? $stats.rooms?.privateGroups ?? 0)
+                DirectMessages = [int]($stats.totalDirect ?? $stats.rooms?.direct ?? 0)
+                LivechatSessions = [int]($stats.totalLivechatSessions ?? $stats.livechat?.sessions ?? 0)
+            }
+            
+            $results.MessageMetrics = $messageStats
+            
+            # Message volume analysis
+            if ($messageStats.Total -gt 10000000) {
+                $results.Issues += @{
+                    Type = "Performance"
+                    Severity = "Info"
+                    Message = "Very high message volume: $($messageStats.Total) total messages"
+                    Metric = "MessageVolume"
+                    Value = $messageStats.Total
+                }
+            }
+            
+            # Database statistics
+            if ($stats.database -or $stats.mongoDb) {
+                $dbStats = $stats.database ?? $stats.mongoDb
+                $results.ResourceUsage.Database = @{
+                    Collections = [int]($dbStats.collections ?? 0)
+                    Objects = [int64]($dbStats.objects ?? 0)
+                    DataSize = [int64]($dbStats.dataSize ?? 0)
+                    IndexSize = [int64]($dbStats.indexSize ?? 0)
+                }
+                
+                # Database size analysis
+                if ($dbStats.dataSize) {
+                    $dataSizeGB = [math]::Round($dbStats.dataSize / 1024 / 1024 / 1024, 2)
+                    if ($dataSizeGB -gt 100) {
+                        $results.Issues += @{
+                            Type = "Performance"
+                            Severity = "Info"
+                            Message = "Large database size: ${dataSizeGB}GB"
+                            Metric = "DatabaseSize"
+                            Value = $dataSizeGB
+                        }
+                    }
+                }
+            }
+            
+            # File upload statistics
+            if ($stats.uploads -or $stats.fileUploads) {
+                $uploadStats = $stats.uploads ?? $stats.fileUploads
+                $results.ResourceUsage.Uploads = @{
+                    Total = [int64]($uploadStats.total ?? 0)
+                    TotalSize = [int64]($uploadStats.totalSize ?? 0)
+                }
+            }
+            
+            # Apps and integrations
+            if ($stats.apps -or $stats.integrations) {
+                $results.ResourceUsage.Apps = @{
+                    TotalApps = [int]($stats.apps?.total ?? 0)
+                    EnabledApps = [int]($stats.apps?.enabled ?? 0)
+                    Integrations = [int]($stats.integrations?.total ?? 0)
                 }
             }
         }
