@@ -374,13 +374,13 @@ function New-CSVReport {
         if ($analysis -is [hashtable] -and $analysis.ContainsKey("Issues")) {
             foreach ($issue in $analysis.Issues) {
                 $csvData += [PSCustomObject]@{
-                    Timestamp = $issue.Timestamp ?? (Get-Date).ToString()
-                    Type = $issue.Type ?? "Unknown"
-                    Severity = $issue.Severity ?? "Info"
-                    Message = $issue.Message ?? ""
-                    Pattern = $issue.Pattern ?? ""
-                    Setting = $issue.Setting ?? ""
-                    Value = $issue.Value ?? ""
+                    Timestamp = if ($issue.Timestamp) { $issue.Timestamp } else { (Get-Date).ToString() }
+                    Type = if ($issue.Type) { $issue.Type } else { "Unknown" }
+                    Severity = if ($issue.Severity) { $issue.Severity } else { "Info" }
+                    Message = if ($issue.Message) { $issue.Message } else { "" }
+                    Pattern = if ($issue.Pattern) { $issue.Pattern } else { "" }
+                    Setting = if ($issue.Setting) { $issue.Setting } else { "" }
+                    Value = if ($issue.Value) { $issue.Value } else { "" }
                     Component = if ($issue.ContainsKey("Context")) { "Log" } 
                                elseif ($issue.ContainsKey("Setting")) { "Settings" }
                                elseif ($issue.ContainsKey("Metric")) { "Statistics" }
@@ -811,11 +811,11 @@ function New-HTMLReport {
             if (section.classList.contains('collapsible')) {
                 section.classList.remove('collapsible');
                 content.style.display = 'block';
-                element.innerHTML = element.innerHTML.replace('▶', '▼');
+                element.innerHTML = element.innerHTML.replace('[+]', '[-]');
             } else {
                 section.classList.add('collapsible');
                 content.style.display = 'none';
-                element.innerHTML = element.innerHTML.replace('▼', '▶');
+                element.innerHTML = element.innerHTML.replace('[-]', '[+]');
             }
         }
         
@@ -826,10 +826,10 @@ function New-HTMLReport {
             
             if (content.style.display === 'none' || content.style.display === '') {
                 content.style.display = 'block';
-                arrow.textContent = '▲';
+                arrow.textContent = '[-]';
             } else {
                 content.style.display = 'none';
-                arrow.textContent = '▼';
+                arrow.textContent = '[+]';
             }
         }
         
@@ -841,11 +841,11 @@ function New-HTMLReport {
             
             if (isExpanded) {
                 details.style.display = 'none';
-                arrow.textContent = '▶';
+                arrow.textContent = '[+]';
                 header.style.backgroundColor = '';
             } else {
                 details.style.display = 'block';
-                arrow.textContent = '▼';
+                arrow.textContent = '[-]';
                 header.style.backgroundColor = 'rgba(0, 122, 204, 0.1)';
             }
         }
@@ -932,7 +932,7 @@ function New-HTMLReport {
                         <ul style="list-style: none; padding: 0; margin: 0;">
 $(foreach ($component in $healthScore.ComponentScores.GetEnumerator()) {
     $color = if ($component.Value -ge 90) { "#28a745" } elseif ($component.Value -ge 70) { "#ffc107" } else { "#dc3545" }
-    $icon = if ($component.Value -ge 90) { "🟢" } elseif ($component.Value -ge 70) { "🟡" } else { "🔴" }
+    $icon = if ($component.Value -ge 90) { "[OK]" } elseif ($component.Value -ge 70) { "[WARN]" } else { "[FAIL]" }
     "                            <li style='color: $color; margin: 8px 0; display: flex; justify-content: space-between; align-items: center;'>
                                 <span>$icon $($component.Key)</span> 
                                 <span style='font-weight: bold; font-size: 1.1em;'>$($component.Value)%</span>
@@ -1027,16 +1027,16 @@ $(if ($errorCount -gt 0) {
 })
 $(if ($warningCount -gt 0) {
 "                    <button class='filter-button' data-filter='warning' onclick='filterLogEntries(`"warning`")'>
-                        ⚠️ Warning ($warningCount)
+                        [WARN] Warning ($warningCount)
                     </button>"
 })
 $(if ($infoCount -gt 0) {
 "                    <button class='filter-button' data-filter='info' onclick='filterLogEntries(`"info`")'>
-                        ℹ️ Info ($infoCount)
+                        [INFO] Info ($infoCount)
                     </button>"
 })
                     <div style="margin-left: auto; color: #6c757d; font-size: 0.9em;">
-                        💡 Click any entry to expand details
+                        [TIP] Click any entry to expand details
                     </div>
                 </div>
                 
@@ -1046,10 +1046,10 @@ $(foreach ($issue in ($logData.Issues | Select-Object -First 50)) {
     $entryId = "log-entry-$([System.Guid]::NewGuid().ToString().Substring(0,8))"
     $severityLower = $issue.Severity.ToLower()
     $severityIcon = switch ($issue.Severity) {
-        "Critical" { "🚨" }
-        "Error" { "❌" }
-        "Warning" { "⚠️" }
-        default { "ℹ️" }
+        "Critical" { "[CRIT]" }
+        "Error" { "[ERR]" }
+        "Warning" { "[WARN]" }
+        default { "[INFO]" }
     }
     $severityColor = switch ($issue.Severity) {
         "Critical" { "#dc3545" }
@@ -1073,15 +1073,15 @@ $(foreach ($issue in ($logData.Issues | Select-Object -First 50)) {
                                     [$($issue.Severity.ToUpper())] $($issue.Message)
                                 </div>
                                 <div style='font-size: 0.9em; color: #6c757d;'>
-                                    $(if ($issue.Timestamp) { "🕒 $($issue.Timestamp)" }) $(if ($component -ne "System") { "📦 $component" }) $(if ($category -ne "General") { "🏷️ $category" })
+                                    $(if ($issue.Timestamp) { "[TIME] $($issue.Timestamp)" }) $(if ($component -ne "System") { "[COMP] $component" }) $(if ($category -ne "General") { "[CAT] $category" })
                                 </div>
                             </div>
-                            <span class='expand-arrow'>▶</span>
+                            <span class='expand-arrow'>[+]</span>
                         </div>
                         <div id='$entryId' class='log-entry-details'>
                             <div style='border-bottom: 1px solid #dee2e6; padding-bottom: 15px; margin-bottom: 15px;'>
                                 <h5 style='margin: 0 0 10px 0; color: #495057; display: flex; align-items: center; gap: 8px;'>
-                                    <span>📋</span> Log Entry Details
+                                    <span>[DETAILS]</span> Log Entry Details
                                 </h5>
                             </div>
                             
@@ -1185,11 +1185,11 @@ $(foreach ($app in ($appsData.InstalledApps.GetEnumerator() | Sort-Object Name))
     $appName = $app.Key
     $appInfo = $app.Value
     $statusIcon = switch -Wildcard ($appInfo.Status) {
-        "*enabled*" { "🟢" }
-        "initialized" { "🟡" }
-        "*disabled*" { "🔴" }
-        "*invalid*" { "❌" }
-        default { "⚪" }
+        "*enabled*" { "[ON]" }
+        "initialized" { "[INIT]" }
+        "*disabled*" { "[OFF]" }
+        "*invalid*" { "[ERR]" }
+        default { "[UNK]" }
     }
     $statusColor = switch -Wildcard ($appInfo.Status) {
         "*enabled*" { "#28a745" }
