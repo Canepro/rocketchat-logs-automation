@@ -1776,11 +1776,14 @@ EOF
                             <span class="stat-label">Uptime:</span>
                             <span class="stat-value">$(
                                 local uptime=${ANALYSIS_RESULTS[stats_uptime]:-0}
-                                # Force decimal interpretation
-                                uptime=$((10#$uptime))
-                                local days=$((uptime / 86400))
-                                local hours=$(((uptime % 86400) / 3600))
-                                echo "${days}d ${hours}h"
+                                # Safely handle uptime calculation
+                                if [[ "$uptime" =~ ^[0-9]+$ ]]; then
+                                    local days=$((uptime / 86400))
+                                    local hours=$(((uptime % 86400) / 3600))
+                                    echo "${days}d ${hours}h"
+                                else
+                                    echo "N/A"
+                                fi
                             )</span>
                         </div>
                     </div>
