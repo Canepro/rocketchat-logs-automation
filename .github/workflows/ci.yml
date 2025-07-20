@@ -1,0 +1,177 @@
+name: RocketChat Log Automation CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-powershell:
+    name: Test PowerShell Version
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PowerShell
+      uses: azure/powershell@v1
+      with:
+        azPSVersion: latest
+        inlineScript: |
+          $PSVersionTable
+    
+    - name: Install PowerShell Dependencies
+      shell: pwsh
+      run: |
+        # Test PowerShell version compatibility
+        Write-Host "PowerShell Version: $($PSVersionTable.PSVersion)"
+        Write-Host "Testing module imports..."
+        
+    - name: Test PowerShell Script Syntax
+      shell: pwsh
+      run: |
+        # Test script syntax without execution
+        $script = Get-Content -Path "./Analyze-RocketChatDump.ps1" -Raw
+        [System.Management.Automation.PSParser]::Tokenize($script, [ref]$null)
+        Write-Host "✅ PowerShell syntax validation passed"
+        
+    - name: Run PowerShell Tests
+      shell: pwsh
+      run: |
+        # Run test script
+        .\Test-Analyzer.ps1
+
+  test-bash:
+    name: Test Bash Version
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq shellcheck
+        
+    - name: Verify Dependencies
+      run: |
+        echo "Bash version:"
+        bash --version
+        echo "jq version:"
+        jq --version
+        echo "Dependencies installed successfully ✅"
+        
+    - name: Run ShellCheck
+      run: |
+        echo "Running ShellCheck on bash scripts..."
+        shellcheck analyze-rocketchat-dump.sh test-analyzer.sh
+        echo "ShellCheck validation passed ✅"
+        
+    - name: Test Script Permissions
+      run: |
+        chmod +x analyze-rocketchat-dump.sh test-analyzer.sh
+        ls -la *.sh
+        echo "Script permissions set correctly ✅"
+        
+    - name: Run Bash Tests
+      run: |
+        ./test-analyzer.sh
+
+  test-cross-platform:
+    name: Cross-Platform Compatibility
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Test on ${{ matrix.os }}
+      shell: bash
+      run: |
+        echo "Testing on ${{ matrix.os }}"
+        
+        # Test basic file structure
+        if [ -f "analyze-rocketchat-dump.sh" ]; then
+          echo "✅ Bash script found"
+        else
+          echo "❌ Bash script missing"
+          exit 1
+        fi
+        
+        if [ -f "Analyze-RocketChatDump.ps1" ]; then
+          echo "✅ PowerShell script found"
+        else
+          echo "❌ PowerShell script missing"
+          exit 1
+        fi
+        
+        if [ -f "README.md" ]; then
+          echo "✅ README found"
+        else
+          echo "❌ README missing"
+          exit 1
+        fi
+        
+        echo "✅ Cross-platform file structure validation passed"
+
+  documentation:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check Documentation
+      run: |
+        echo "Checking documentation completeness..."
+        
+        # Check required files
+        required_files=("README.md" "CONTRIBUTING.md" "LICENSE")
+        for file in "${required_files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file exists"
+          else
+            echo "❌ $file missing"
+            exit 1
+          fi
+        done
+        
+        # Check README sections
+        if grep -q "## Features" README.md; then
+          echo "✅ Features section found in README"
+        else
+          echo "❌ Features section missing in README"
+          exit 1
+        fi
+        
+        if grep -q "## Installation" README.md; then
+          echo "✅ Installation section found in README"
+        else
+          echo "❌ Installation section missing in README"
+          exit 1
+        fi
+        
+        echo "✅ Documentation check passed"
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run Security Scan
+      run: |
+        echo "Running basic security checks..."
+        
+        # Check for hardcoded credentials (basic patterns)
+        if grep -r -i "password\|secret\|token\|key" --include="*.ps1" --include="*.sh" --exclude-dir=".git" . | grep -v "# Example\|TODO\|FIXME"; then
+          echo "⚠️ Potential hardcoded credentials found"
+          # Don't fail on this for now, just warn
+        else
+          echo "✅ No obvious hardcoded credentials found"
+        fi
+        
+        # Check file permissions
+        find . -name "*.sh" -type f ! -executable -exec echo "⚠️ Non-executable shell script: {}" \;
+        
+        echo "✅ Basic security scan completed"

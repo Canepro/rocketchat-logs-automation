@@ -1,0 +1,102 @@
+{
+  "logPatterns": {
+    "error": [
+      "error",
+      "exception",
+      "failed",
+      "timeout",
+      "connection refused",
+      "cannot connect",
+      "database error",
+      "mongodb error",
+      "uncaught exception",
+      "stack trace",
+      "fatal error",
+      "critical error",
+      "server error",
+      "internal error",
+      "authentication failed",
+      "authorization failed",
+      "permission denied",
+      "access denied"
+    ],
+    "warning": [
+      "warn",
+      "warning",
+      "deprecated",
+      "slow query",
+      "slow operation",
+      "high memory usage",
+      "high cpu usage",
+      "retry",
+      "retrying",
+      "fallback",
+      "degraded performance",
+      "rate limit",
+      "quota exceeded",
+      "disk space low",
+      "memory leak"
+    ],
+    "security": [
+      "auth",
+      "authentication",
+      "authorization",
+      "login failed",
+      "invalid credentials",
+      "unauthorized",
+      "permission",
+      "security",
+      "breach",
+      "attack",
+      "suspicious",
+      "malicious",
+      "injection",
+      "xss",
+      "csrf",
+      "brute force",
+      "intrusion"
+    ]
+  },
+  "performanceThresholds": {
+    "responseTime": 5000,
+    "memoryUsageMB": 2048,
+    "cpuUsagePercent": 90,
+    "diskUsagePercent": 85,
+    "connectionTimeout": 30000,
+    "maxUsers": 10000,
+    "maxMessages": 1000000
+  },
+  "securitySettings": {
+    "requiredSettings": [
+      "Accounts_TwoFactorAuthentication_Enabled",
+      "Accounts_PasswordReset",
+      "LDAP_Enable",
+      "SAML_Custom_Default",
+      "FileUpload_Storage_Type"
+    ],
+    "recommendedValues": {
+      "Accounts_TwoFactorAuthentication_Enabled": true,
+      "Accounts_RegistrationForm": "Disabled",
+      "Accounts_AllowAnonymousRead": false,
+      "Accounts_AllowAnonymousWrite": false
+    }
+  },
+  "analysisRules": {
+    "maxIssuesPerCategory": 100,
+    "severityWeights": {
+      "critical": 25,
+      "error": 10,
+      "warning": 5,
+      "info": 1
+    },
+    "timeWindowHours": 24,
+    "patternMatchThreshold": 3
+  },
+  "reportSettings": {
+    "includeStackTraces": false,
+    "maxMessageLength": 500,
+    "includeTimestamps": true,
+    "groupSimilarIssues": true,
+    "exportFormats": ["console", "json", "csv", "html"]
+  }
+}

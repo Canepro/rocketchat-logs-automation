@@ -1,0 +1,122 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Test RocketChat Analyzer (PowerShell)",
+			"type": "shell",
+			"command": "pwsh.exe",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}\\Test-Analyzer.ps1"
+			],
+			"group": "test",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "new"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Test RocketChat Analyzer (Bash)",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"${workspaceFolder}/test-analyzer.sh"
+			],
+			"group": "test",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "new"
+			},
+			"problemMatcher": [],
+			"linux": {
+				"command": "bash"
+			},
+			"osx": {
+				"command": "bash"
+			},
+			"windows": {
+				"command": "wsl",
+				"args": ["bash", "${workspaceFolder}/test-analyzer.sh"]
+			}
+		},
+		{
+			"label": "Run PowerShell Analyzer",
+			"type": "shell",
+			"command": "pwsh.exe",
+			"args": [
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"${workspaceFolder}\\Analyze-RocketChatDump.ps1",
+				"-DumpPath",
+				"${input:dumpPath}",
+				"-OutputFormat",
+				"${input:outputFormat}"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "new"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Run Bash Analyzer",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"${workspaceFolder}/analyze-rocketchat-dump.sh",
+				"--format",
+				"${input:outputFormat}",
+				"${input:dumpPath}"
+			],
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "new"
+			},
+			"problemMatcher": [],
+			"linux": {
+				"command": "bash"
+			},
+			"osx": {
+				"command": "bash"
+			},
+			"windows": {
+				"command": "wsl",
+				"args": ["bash", "${workspaceFolder}/analyze-rocketchat-dump.sh", "--format", "${input:outputFormat}", "${input:dumpPath}"]
+			}
+		}
+	],
+	"inputs": [
+		{
+			"id": "dumpPath",
+			"description": "Path to RocketChat support dump",
+			"default": "C:\\Downloads\\7.8.0-support-dump",
+			"type": "promptString"
+		},
+		{
+			"id": "outputFormat",
+			"description": "Output format",
+			"default": "console",
+			"type": "pickString",
+			"options": [
+				"console",
+				"json",
+				"csv",
+				"html"
+			]
+		}
+	]
+}

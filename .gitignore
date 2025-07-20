@@ -1,0 +1,84 @@
+# RocketChat Log Automation - Git Ignore File
+
+# Temporary analysis files
+.tmp_*
+temp_*
+*.tmp
+
+# RocketChat support dumps (sensitive data)
+*support-dump*
+*-dump/
+*.json.bak
+*-statistics.json
+*-logs.json
+*-settings.json
+*-apps.json
+*-omnichannel.json
+
+# Generated reports
+reports/
+*.html
+*.csv
+report_*.json
+analysis_*.json
+
+# PowerShell specific
+*.ps1xml
+PSScriptAnalyzerSettings.psd1
+TestResults.xml
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+
+# Editor specific
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Log files
+*.log
+logs/
+debug.txt
+error.log
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Windows PowerShell execution policy bypass
+*.ps1.copy
+
+# Test data (keep structure, ignore content)
+test-data/*.json
+sample-dumps/
+test-dumps/
+
+# Environment specific
+.env
+.env.local
+config.local.json
+
+# Package managers
+node_modules/
+*.lock
+
+# Compressed files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Documentation builds
+docs/_build/
+docs/dist/
+
+# Runtime files
+*.pid
+*.sock
