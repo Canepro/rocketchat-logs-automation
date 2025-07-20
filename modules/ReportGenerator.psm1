@@ -347,10 +347,33 @@ function New-CSVReport {
 function New-HTMLReport {
     <#
     .SYNOPSIS
-        Generates an HTML report of the analysis results.
+        Generates a comprehensive HTML report of RocketChat analysis results.
+    
+    .DESCRIPTION
+        Creates a professional, interactive HTML report with:
+        - Executive summary with health score and priority actions
+        - Collapsible sections for detailed analysis
+        - Color-coded severity indicators
+        - Component health breakdown
+        - Security analysis and recommendations
+        - Responsive design for various devices
     
     .PARAMETER Results
-        Analysis results from the main script
+        Analysis results hashtable from the main script containing:
+        - LogAnalysis, SettingsAnalysis, StatisticsAnalysis
+        - OmnichannelAnalysis, AppsAnalysis
+        - Summary information and timestamps
+    
+    .EXAMPLE
+        $report = New-HTMLReport -Results $AnalysisResults
+        $report | Out-File -FilePath "report.html" -Encoding UTF8
+    
+    .OUTPUTS
+        String containing complete HTML report with embedded CSS and JavaScript
+    
+    .NOTES
+        The generated HTML is self-contained with embedded styling and scripts.
+        No external dependencies required for viewing.
     #>
     param(
         [Parameter(Mandatory = $true)]

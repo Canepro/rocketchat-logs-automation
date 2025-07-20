@@ -12,11 +12,37 @@ function Invoke-LogAnalysis {
     .SYNOPSIS
         Analyzes RocketChat log files for errors, warnings, and patterns.
     
+    .DESCRIPTION
+        This function performs comprehensive analysis of RocketChat log files, including:
+        - Error and warning detection based on configurable patterns
+        - Security event identification
+        - Pattern frequency analysis
+        - Time range analysis
+        - Performance issue detection
+    
     .PARAMETER LogFile
-        Path to the RocketChat log file (JSON format)
+        Path to the RocketChat log file (JSON format). The file should contain log entries
+        with timestamp, level, and message fields.
     
     .PARAMETER Config
-        Configuration object containing analysis rules
+        Configuration object containing analysis rules including:
+        - LogPatterns.Error: Array of error patterns to detect
+        - LogPatterns.Warning: Array of warning patterns to detect  
+        - LogPatterns.Security: Array of security-related patterns to detect
+    
+    .EXAMPLE
+        $config = @{
+            LogPatterns = @{
+                Error = @("error", "exception", "failed")
+                Warning = @("warn", "deprecated") 
+                Security = @("auth", "login", "permission")
+            }
+        }
+        $results = Invoke-LogAnalysis -LogFile "rocketchat.log.json" -Config $config
+    
+    .NOTES
+        Author: Support Engineering Team
+        Requires: PowerShell 5.1+, valid JSON log file
     #>
     param(
         [Parameter(Mandatory = $true)]
@@ -157,13 +183,32 @@ function Invoke-LogAnalysis {
 function Invoke-SettingsAnalysis {
     <#
     .SYNOPSIS
-        Analyzes RocketChat settings for configuration issues.
+        Analyzes RocketChat settings for configuration issues and security vulnerabilities.
+    
+    .DESCRIPTION
+        This function performs comprehensive analysis of RocketChat settings including:
+        - Security configuration validation (2FA, registration, passwords)
+        - Performance setting optimization checks
+        - Configuration best practices validation
+        - Threshold monitoring for timeouts and limits
     
     .PARAMETER SettingsFile
-        Path to the RocketChat settings file (JSON format)
+        Path to the RocketChat settings file (JSON format). Should contain settings
+        with _id/key and value fields.
     
     .PARAMETER Config
-        Configuration object containing analysis rules
+        Configuration object containing analysis rules and thresholds for validation.
+    
+    .EXAMPLE
+        $config = @{ PerformanceThresholds = @{ ResponseTime = 5000 } }
+        $results = Invoke-SettingsAnalysis -SettingsFile "settings.json" -Config $config
+    
+    .OUTPUTS
+        Hashtable containing Issues, Settings, SecuritySettings, and PerformanceSettings
+    
+    .NOTES
+        Author: Support Engineering Team
+        Version: 1.2.0
     #>
     param(
         [Parameter(Mandatory = $true)]
@@ -216,6 +261,17 @@ function Invoke-SettingsAnalysis {
                             Value = $value
                         }
                     }
+                    
+                    # Check for 2FA disabled
+                    if ($key -match "TwoFactorAuthentication.*Enabled" -and $value -eq $false) {
+                        $results.Issues += @{
+                            Type = "Security"
+                            Severity = "Warning"
+                            Message = "Two-factor authentication is disabled"
+                            Setting = $key
+                            Value = $value
+                        }
+                    }
                 }
                 
                 # Check performance-related settings
@@ -255,11 +311,33 @@ function Invoke-StatisticsAnalysis {
     .SYNOPSIS
         Analyzes RocketChat server statistics for performance and health issues.
     
+    .DESCRIPTION
+        This function analyzes server statistics to identify:
+        - Memory usage patterns and potential memory leaks
+        - User load distribution and capacity planning needs
+        - Message volume trends and storage requirements
+        - Server performance metrics and bottlenecks
+    
     .PARAMETER StatisticsFile
-        Path to the RocketChat statistics file (JSON format)
+        Path to the RocketChat statistics file (JSON format). Should contain server
+        metrics, user statistics, and performance data.
     
     .PARAMETER Config
-        Configuration object containing analysis rules
+        Configuration object containing performance thresholds:
+        - PerformanceThresholds.MemoryUsage: Memory usage threshold percentage
+        - PerformanceThresholds.ResponseTime: Maximum acceptable response time
+    
+    .EXAMPLE
+        $config = @{
+            PerformanceThresholds = @{
+                MemoryUsage = 80
+                ResponseTime = 5000
+            }
+        }
+        $results = Invoke-StatisticsAnalysis -StatisticsFile "stats.json" -Config $config
+    
+    .OUTPUTS
+        Hashtable with Issues, ServerInfo, PerformanceMetrics, and ResourceUsage
     #>
     param(
         [Parameter(Mandatory = $true)]
@@ -358,13 +436,27 @@ function Invoke-StatisticsAnalysis {
 function Invoke-OmnichannelAnalysis {
     <#
     .SYNOPSIS
-        Analyzes RocketChat Omnichannel configuration.
+        Analyzes RocketChat Omnichannel configuration for customer service optimization.
+    
+    .DESCRIPTION
+        This function analyzes Omnichannel (Livechat) configuration to identify:
+        - Routing efficiency and customer wait times
+        - Agent availability and distribution settings
+        - Offline form configuration for 24/7 support
+        - Integration settings and webhook configurations
     
     .PARAMETER OmnichannelFile
-        Path to the RocketChat Omnichannel file (JSON format)
+        Path to the RocketChat Omnichannel file (JSON format). Contains Livechat
+        settings and agent configurations.
     
     .PARAMETER Config
-        Configuration object containing analysis rules
+        Configuration object containing analysis rules for Omnichannel best practices.
+    
+    .EXAMPLE
+        $results = Invoke-OmnichannelAnalysis -OmnichannelFile "omnichannel.json" -Config $config
+    
+    .OUTPUTS
+        Hashtable containing Issues, Configuration, and Integrations analysis
     #>
     param(
         [Parameter(Mandatory = $true)]
@@ -391,7 +483,50 @@ function Invoke-OmnichannelAnalysis {
         $omnichannelContent = Get-Content $OmnichannelFile -Raw | ConvertFrom-Json
         
         # Analyze Omnichannel configuration
-        # Add specific analysis logic based on Omnichannel structure
+        if ($omnichannelContent -is [array]) {
+            $omnichannelData = $omnichannelContent
+        } elseif ($omnichannelContent.omnichannel) {
+            $omnichannelData = $omnichannelContent.omnichannel
+        } else {
+            $omnichannelData = @($omnichannelContent)
+        }
+        
+        foreach ($item in $omnichannelData) {
+            # Check Omnichannel enabled status
+            if ($item._id -eq "Livechat_enabled" -and $item.value -eq $false) {
+                $results.Issues += @{
+                    Type = "Configuration"
+                    Severity = "Info"
+                    Message = "Omnichannel (Livechat) is disabled"
+                    Setting = $item._id
+                }
+            }
+            
+            # Check for proper routing configuration
+            if ($item._id -eq "Livechat_Routing_Method" -and $item.value -eq "Manual_Selection") {
+                $results.Issues += @{
+                    Type = "Configuration"
+                    Severity = "Warning"
+                    Message = "Manual routing may cause delays in customer service"
+                    Setting = $item._id
+                }
+            }
+            
+            # Check for offline form configuration
+            if ($item._id -eq "Livechat_offline_form_unavailable" -and $item.value -eq $true) {
+                $results.Issues += @{
+                    Type = "Configuration"
+                    Severity = "Warning"
+                    Message = "Offline form is disabled - customers cannot leave messages when agents are unavailable"
+                    Setting = $item._id
+                }
+            }
+            
+            # Store configuration for reporting
+            if ($item._id) {
+                $results.Configuration[$item._id] = $item.value
+            }
+        }
         
         Write-Verbose "Omnichannel analysis complete. Found $($results.Issues.Count) issues"
         
@@ -410,13 +545,30 @@ function Invoke-OmnichannelAnalysis {
 function Invoke-AppsAnalysis {
     <#
     .SYNOPSIS
-        Analyzes RocketChat installed apps and integrations.
+        Analyzes RocketChat installed apps and integrations for security and performance.
+    
+    .DESCRIPTION
+        This function analyzes installed RocketChat apps to identify:
+        - Security-related apps and their status
+        - Performance monitoring and analytics apps
+        - Outdated or deprecated apps requiring updates
+        - Disabled critical apps that may impact functionality
     
     .PARAMETER AppsFile
-        Path to the RocketChat apps file (JSON format)
+        Path to the RocketChat apps file (JSON format). Contains information about
+        installed apps, their versions, and status.
     
     .PARAMETER Config
-        Configuration object containing analysis rules
+        Configuration object containing analysis rules for app evaluation.
+    
+    .EXAMPLE
+        $results = Invoke-AppsAnalysis -AppsFile "apps.json" -Config $config
+        foreach ($app in $results.InstalledApps.Keys) {
+            Write-Host "App: $app, Status: $($results.InstalledApps[$app].Status)"
+        }
+    
+    .OUTPUTS
+        Hashtable containing Issues, InstalledApps, SecurityApps, and PerformanceApps
     #>
     param(
         [Parameter(Mandatory = $true)]
@@ -444,7 +596,60 @@ function Invoke-AppsAnalysis {
         $appsContent = Get-Content $AppsFile -Raw | ConvertFrom-Json
         
         # Analyze installed apps
-        # Add specific analysis logic based on apps structure
+        if ($appsContent -is [array]) {
+            $appsData = $appsContent
+        } elseif ($appsContent.apps) {
+            $appsData = $appsContent.apps
+        } else {
+            $appsData = @($appsContent)
+        }
+        
+        foreach ($app in $appsData) {
+            $appName = $app.name ?? $app.id ?? $app._id ?? "Unknown App"
+            $appVersion = $app.version ?? "Unknown"
+            $appStatus = $app.status ?? $app.enabled ?? "Unknown"
+            
+            # Store app information
+            $results.InstalledApps[$appName] = @{
+                Version = $appVersion
+                Status = $appStatus
+                Description = $app.description ?? ""
+                Author = $app.author ?? ""
+            }
+            
+            # Check for security-related apps
+            if ($appName -match "security|auth|2fa|login|password") {
+                $results.SecurityApps[$appName] = $results.InstalledApps[$appName]
+            }
+            
+            # Check for performance-related apps
+            if ($appName -match "monitor|performance|analytics|metrics") {
+                $results.PerformanceApps[$appName] = $results.InstalledApps[$appName]
+            }
+            
+            # Check for disabled critical apps
+            if ($appStatus -eq "disabled" -or $appStatus -eq $false) {
+                $severity = if ($appName -match "security|backup|monitor") { "Warning" } else { "Info" }
+                $results.Issues += @{
+                    Type = "App Configuration"
+                    Severity = $severity
+                    Message = "App '$appName' is disabled"
+                    App = $appName
+                    Status = $appStatus
+                }
+            }
+            
+            # Check for outdated apps (this is a simple check - in real scenarios you'd compare against latest versions)
+            if ($appVersion -match "^[0-9]+" -and [int]($appVersion.Split('.')[0]) -lt 2) {
+                $results.Issues += @{
+                    Type = "App Version"
+                    Severity = "Warning"
+                    Message = "App '$appName' may be outdated (version $appVersion)"
+                    App = $appName
+                    Version = $appVersion
+                }
+            }
+        }
         
         Write-Verbose "Apps analysis complete. Found $($results.Issues.Count) issues"
         

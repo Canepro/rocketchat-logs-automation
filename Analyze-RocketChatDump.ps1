@@ -126,7 +126,38 @@ function Write-Status {
 }
 
 function Get-DumpFiles {
-    param([string]$Path)
+    <#
+    .SYNOPSIS
+        Discovers and validates RocketChat support dump files by pattern matching.
+    
+    .DESCRIPTION
+        This function intelligently discovers RocketChat dump files by analyzing
+        file names and directory structure. It supports both directory analysis
+        and single file processing.
+    
+    .PARAMETER Path
+        Path to RocketChat support dump directory or specific dump file.
+        Supports both relative and absolute paths.
+    
+    .EXAMPLE
+        $files = Get-DumpFiles -Path "C:\Support\7.8.0-support-dump"
+        if ($files.Log) { Write-Host "Found log file: $($files.Log.Name)" }
+    
+    .OUTPUTS
+        Hashtable containing discovered files:
+        - Log: System log files (*log*.json)
+        - Settings: Configuration settings (*settings*.json)
+        - Statistics: Server statistics (*statistics*.json)
+        - Omnichannel: Livechat configuration (*omnichannel*.json)
+        - Apps: Installed apps information (*apps*.json)
+    
+    .NOTES
+        File discovery is based on filename patterns and is case-insensitive.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
     
     $files = @{}
     
