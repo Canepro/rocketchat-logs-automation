@@ -191,8 +191,8 @@ function Import-RequiredModules {
 # =============================================================================
 # MAIN EXECUTION
 # =============================================================================
-
-try {
+    # Initialize analysis with prerequisites check
+    # Initialize analysis with prerequisites check
     # Initialize analysis with prerequisites check
     Write-Verbose "Initializing RocketChat Support Dump Analyzer..."
     Test-Prerequisites
