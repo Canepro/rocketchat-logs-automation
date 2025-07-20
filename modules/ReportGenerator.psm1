@@ -83,7 +83,9 @@ function Write-ConsoleReport {
         }
         
         # Display issues
-        $filteredIssues = $Results.LogAnalysis.Issues | Where-Object { $severityLevels[$_.Severity] -ge $minLevel }
+        $filteredIssues = if ($Results.LogAnalysis -and $Results.LogAnalysis.Issues) {
+            $Results.LogAnalysis.Issues | Where-Object { $severityLevels[$_.Severity] -ge $minLevel }
+        } else { @() }
         if ($filteredIssues.Count -gt 0) {
             Write-Host "`nTop Issues:" -ForegroundColor Yellow
             $filteredIssues | Select-Object -First 10 | ForEach-Object {
@@ -111,7 +113,9 @@ function Write-ConsoleReport {
         Write-Host "`n⚙️ SETTINGS ANALYSIS" -ForegroundColor Green
         Write-Host "-" * 20 -ForegroundColor Gray
         
-        $filteredSettingsIssues = $Results.SettingsAnalysis.Issues | Where-Object { $severityLevels[$_.Severity] -ge $minLevel }
+        $filteredSettingsIssues = if ($Results.SettingsAnalysis -and $Results.SettingsAnalysis.Issues) {
+            $Results.SettingsAnalysis.Issues | Where-Object { $severityLevels[$_.Severity] -ge $minLevel }
+        } else { @() }
         if ($filteredSettingsIssues.Count -gt 0) {
             Write-Host "Configuration Issues:" -ForegroundColor Yellow
             $filteredSettingsIssues | ForEach-Object {
@@ -159,7 +163,9 @@ function Write-ConsoleReport {
             }
         }
         
-        $filteredStatsIssues = $Results.StatisticsAnalysis.Issues | Where-Object { $severityLevels[$_.Severity] -ge $minLevel }
+        $filteredStatsIssues = if ($Results.StatisticsAnalysis -and $Results.StatisticsAnalysis.Issues) {
+            $Results.StatisticsAnalysis.Issues | Where-Object { $severityLevels[$_.Severity] -ge $minLevel }
+        } else { @() }
         if ($filteredStatsIssues.Count -gt 0) {
             Write-Host "`nPerformance Issues:" -ForegroundColor Yellow
             $filteredStatsIssues | ForEach-Object {
@@ -259,8 +265,9 @@ function New-JSONReport {
     $errorPatterns = Get-ErrorPatterns -Issues $allIssues
     $trends = Get-TrendAnalysis -Issues $allIssues
     
-    $report = @{
-        metadata = @{
+    # Convert to PSCustomObject to ensure proper JSON serialization
+    $report = [PSCustomObject]@{
+        metadata = [PSCustomObject]@{
             reportType = "RocketChat Support Dump Analysis"
             version = "1.0.0"
             generatedAt = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ssZ")
@@ -268,14 +275,14 @@ function New-JSONReport {
         }
         healthScore = $healthScore
         summary = $Results.Summary
-        analysis = @{
+        analysis = [PSCustomObject]@{
             logs = $Results.LogAnalysis
             settings = $Results.SettingsAnalysis
             statistics = $Results.StatisticsAnalysis
             omnichannel = $Results.OmnichannelAnalysis
             apps = $Results.AppsAnalysis
         }
-        insights = @{
+        insights = [PSCustomObject]@{
             errorPatterns = $errorPatterns
             trends = $trends
         }
@@ -283,15 +290,15 @@ function New-JSONReport {
     
     # Add security analysis if settings are available
     if ($Results.SettingsAnalysis) {
-        $report.insights.security = Get-SecurityAnalysis -Settings $Results.SettingsAnalysis -Issues $allIssues
+        $report.insights | Add-Member -MemberType NoteProperty -Name "security" -Value (Get-SecurityAnalysis -Settings $Results.SettingsAnalysis -Issues $allIssues)
     }
     
     # Add performance insights if statistics are available
     if ($Results.StatisticsAnalysis) {
-        $report.insights.performance = Get-PerformanceInsights -Statistics $Results.StatisticsAnalysis -Config @{ PerformanceThresholds = @{} }
+        $report.insights | Add-Member -MemberType NoteProperty -Name "performance" -Value (Get-PerformanceInsights -Statistics $Results.StatisticsAnalysis -Config @{ PerformanceThresholds = @{} })
     }
     
-    return ($report | ConvertTo-Json -Depth 10)
+    return ($report | ConvertTo-Json -Depth 10 -WarningAction SilentlyContinue)
 }
 
 function New-CSVReport {
@@ -355,9 +362,13 @@ function New-HTMLReport {
         }
     }
     
-    $securityAnalysis = if ($Results.SettingsAnalysis) { 
+    $securityAnalysis = if ($Results.SettingsAnalysis -and $allIssues.Count -gt 0) { 
         Get-SecurityAnalysis -Settings $Results.SettingsAnalysis -Issues $allIssues 
-    } else { @{} }
+    } elseif ($Results.SettingsAnalysis) {
+        Get-SecurityAnalysis -Settings $Results.SettingsAnalysis -Issues @()
+    } else { 
+        @{} 
+    }
     
     $html = @"
 <!DOCTYPE html>
@@ -367,75 +378,325 @@ function New-HTMLReport {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RocketChat Support Dump Analysis Report</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .header { text-align: center; color: #333; border-bottom: 2px solid #007acc; padding-bottom: 20px; margin-bottom: 30px; }
-        .header h1 { color: #007acc; margin: 0; }
-        .section { margin-bottom: 30px; }
-        .section h2 { color: #333; border-left: 4px solid #007acc; padding-left: 15px; }
-        .health-score { display: flex; justify-content: space-around; text-align: center; margin: 20px 0; }
-        .score-card { background-color: #f8f9fa; padding: 20px; border-radius: 8px; min-width: 150px; }
-        .score-excellent { background-color: #d4edda; border-left: 4px solid #28a745; }
-        .score-good { background-color: #fff3cd; border-left: 4px solid #ffc107; }
-        .score-poor { background-color: #f8d7da; border-left: 4px solid #dc3545; }
+        /* Modern gradient background and typography */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: rgba(255,255,255,0.95); 
+            padding: 30px; 
+            border-radius: 15px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        /* Enhanced header with gradient */
+        .header { 
+            text-align: center; 
+            color: #333; 
+            background: linear-gradient(90deg, #007acc, #00a8ff);
+            margin: -30px -30px 30px -30px;
+            padding: 40px 30px;
+            border-radius: 15px 15px 0 0;
+            color: white;
+        }
+        .header h1 { 
+            color: white; 
+            margin: 0; 
+            font-size: 2.5em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        /* Collapsible sections with animation */
+        .section { 
+            margin-bottom: 30px; 
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .section h2 { 
+            color: #333; 
+            border-left: 4px solid #007acc; 
+            padding: 15px;
+            margin: 0;
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+        .section h2:hover {
+            background: linear-gradient(90deg, #e9ecef, #dee2e6);
+            transform: translateX(5px);
+        }
+        .section-content {
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-top: none;
+        }
+        .collapsible .section-content {
+            display: none;
+        }
+        
+        /* Enhanced health score cards */
+        .health-score { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 20px; 
+            margin: 20px 0; 
+        }
+        .score-card { 
+            background: linear-gradient(135deg, #f8f9fa, #ffffff); 
+            padding: 25px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .score-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+        .score-excellent { 
+            background: linear-gradient(135deg, #d4edda, #c3e6cb); 
+            border-color: #28a745;
+        }
+        .score-good { 
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7); 
+            border-color: #ffc107;
+        }
+        .score-poor { 
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb); 
+            border-color: #dc3545;
+        }
+        
+        /* Enhanced issue styling */
         .issue-list { list-style: none; padding: 0; }
-        .issue-item { padding: 10px; margin: 5px 0; border-radius: 4px; border-left: 4px solid; }
-        .issue-critical { background-color: #f8d7da; border-left-color: #dc3545; }
-        .issue-error { background-color: #f8d7da; border-left-color: #dc3545; }
-        .issue-warning { background-color: #fff3cd; border-left-color: #ffc107; }
-        .issue-info { background-color: #d1ecf1; border-left-color: #17a2b8; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }
-        .stat-card { background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6; }
-        .timestamp { color: #6c757d; font-size: 0.9em; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #f8f9fa; font-weight: bold; }
-        .recommendations { background-color: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #007acc; }
+        .issue-item { 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 8px; 
+            border-left: 4px solid;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .issue-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+        .issue-critical { 
+            background: linear-gradient(90deg, #f8d7da, #f5c6cb); 
+            border-left-color: #dc3545; 
+        }
+        .issue-error { 
+            background: linear-gradient(90deg, #f8d7da, #f5c6cb); 
+            border-left-color: #dc3545; 
+        }
+        .issue-warning { 
+            background: linear-gradient(90deg, #fff3cd, #ffeaa7); 
+            border-left-color: #ffc107; 
+        }
+        .issue-info { 
+            background: linear-gradient(90deg, #d1ecf1, #bee5eb); 
+            border-left-color: #17a2b8; 
+        }
+        
+        /* Enhanced grid and cards */
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 20px; 
+            margin: 20px 0; 
+        }
+        .stat-card { 
+            background: linear-gradient(135deg, #ffffff, #f8f9fa); 
+            padding: 20px; 
+            border-radius: 12px; 
+            border: 1px solid #dee2e6;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+        }
+        
+        /* Enhanced styling elements */
+        .timestamp { color: rgba(255,255,255,0.9); font-size: 1.1em; font-weight: 300; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        th, td { padding: 15px; text-align: left; }
+        th { 
+            background: linear-gradient(90deg, #007acc, #0056b3); 
+            color: white;
+            font-weight: 600;
+        }
+        td { border-bottom: 1px solid #dee2e6; }
+        
+        /* Premium recommendations section */
+        .recommendations { 
+            background: linear-gradient(135deg, #e7f3ff, #d4edda); 
+            padding: 25px; 
+            border-radius: 12px; 
+            border-left: 6px solid #007acc;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        /* Responsive design improvements */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 20px; }
+            .header { margin: -20px -20px 20px -20px; padding: 30px 20px; }
+            .header h1 { font-size: 2em; }
+            .health-score { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+        
+        /* Loading animation and modern touches */
+        .fade-in {
+            animation: fadeIn 0.8s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Status badges with better visual indicators */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-excellent { background: #28a745; color: white; }
+        .status-good { background: #ffc107; color: #333; }
+        .status-poor { background: #dc3545; color: white; }
+        
+        /* Executive summary styling */
+        .executive-summary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+        .executive-summary h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.5em;
+        }
     </style>
+    <script>
+        function toggleSection(element) {
+            const content = element.nextElementSibling;
+            const section = element.parentElement;
+            
+            if (section.classList.contains('collapsible')) {
+                section.classList.remove('collapsible');
+                content.style.display = 'block';
+                element.innerHTML = element.innerHTML.replace('▶', '▼');
+            } else {
+                section.classList.add('collapsible');
+                content.style.display = 'none';
+                element.innerHTML = element.innerHTML.replace('▼', '▶');
+            }
+        }
+        
+        // Add fade-in animation on load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('.container').classList.add('fade-in');
+        });
+    </script>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🚀 RocketChat Support Dump Analysis Report</h1>
             <p class="timestamp">Generated on $(Get-Date -Format "MMMM dd, yyyy 'at' HH:mm:ss")</p>
-            <p><strong>Dump Path:</strong> $($Results.DumpPath)</p>
+            <p><strong>Analysis Path:</strong> $($Results.DumpPath)</p>
+        </div>
+        
+        <!-- Executive Summary -->
+        <div class="executive-summary">
+            <h3>📋 Executive Summary</h3>
+            <p><strong>System Health:</strong> <span class="status-badge $(if ($healthScore.OverallScore -ge 90) { 'status-excellent' } elseif ($healthScore.OverallScore -ge 70) { 'status-good' } else { 'status-poor' })">$($healthScore.OverallScore)% $(if ($healthScore.OverallScore -ge 90) { 'EXCELLENT' } elseif ($healthScore.OverallScore -ge 70) { 'GOOD' } else { 'NEEDS ATTENTION' })</span></p>
+            <p><strong>Total Issues Found:</strong> $($healthScore.Issues.Critical + $healthScore.Issues.Error + $healthScore.Issues.Warning + $healthScore.Issues.Info) 
+            $(if ($healthScore.Issues.Critical -gt 0) { "⚠️ Including $($healthScore.Issues.Critical) critical issue(s)" })
+            </p>
+            <p><strong>Recommended Action:</strong> $(if ($healthScore.OverallScore -lt 50) { "🚨 Immediate attention required for system stability" } elseif ($healthScore.OverallScore -lt 70) { "⚠️ Address identified issues to improve performance" } elseif ($healthScore.OverallScore -lt 90) { "✅ System is stable with minor improvements recommended" } else { "🎉 System is performing optimally" })</p>
         </div>
         
         <div class="section">
-            <h2>📊 Health Overview</h2>
-            <div class="health-score">
-                <div class="score-card $(if ($healthScore.OverallScore -ge 90) { 'score-excellent' } elseif ($healthScore.OverallScore -ge 70) { 'score-good' } else { 'score-poor' })">
-                    <h3>Overall Health</h3>
-                    <div style="font-size: 2em; font-weight: bold;">$($healthScore.OverallScore)%</div>
+            <h2 onclick="toggleSection(this)">📊 Health Overview ▼</h2>
+            <div class="section-content">
+                <div class="health-score">
+                    <div class="score-card $(if ($healthScore.OverallScore -ge 90) { 'score-excellent' } elseif ($healthScore.OverallScore -ge 70) { 'score-good' } else { 'score-poor' })">
+                        <h3>🎯 Overall Health</h3>
+                        <div style="font-size: 3em; font-weight: bold; margin: 10px 0;">$($healthScore.OverallScore)%</div>
+                        <span class="status-badge $(if ($healthScore.OverallScore -ge 90) { 'status-excellent' } elseif ($healthScore.OverallScore -ge 70) { 'status-good' } else { 'status-poor' })">
+                            $(if ($healthScore.OverallScore -ge 90) { 'EXCELLENT' } elseif ($healthScore.OverallScore -ge 70) { 'GOOD' } else { 'CRITICAL' })
+                        </span>
+                    </div>
+                    <div class="score-card">
+                        <h3>📊 Total Issues</h3>
+                        <div style="font-size: 3em; font-weight: bold; margin: 10px 0; color: $(if ($Results.Summary.TotalIssues -eq 0) { '#28a745' } elseif ($healthScore.Issues.Critical -gt 0) { '#dc3545' } else { '#ffc107' });">$($Results.Summary.TotalIssues)</div>
+                        <small style="color: #6c757d;">All severity levels</small>
+                    </div>
+                    <div class="score-card $(if ($healthScore.Issues.Critical -eq 0) { 'score-excellent' } else { 'score-poor' })">
+                        <h3>🚨 Critical Issues</h3>
+                        <div style="font-size: 3em; font-weight: bold; margin: 10px 0; color: #dc3545;">$($healthScore.Issues.Critical)</div>
+                        <small style="color: #6c757d;">Requiring immediate attention</small>
+                    </div>
                 </div>
-                <div class="score-card">
-                    <h3>Total Issues</h3>
-                    <div style="font-size: 2em; font-weight: bold;">$($Results.Summary.TotalIssues)</div>
-                </div>
-                <div class="score-card">
-                    <h3>Critical Issues</h3>
-                    <div style="font-size: 2em; font-weight: bold; color: #dc3545;">$($healthScore.Issues.Critical)</div>
-                </div>
-            </div>
-            
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h4>Component Health</h4>
-                    <ul style="list-style: none; padding: 0;">
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>🏥 Component Health</h4>
+                        <ul style="list-style: none; padding: 0; margin: 0;">
 $(foreach ($component in $healthScore.ComponentScores.GetEnumerator()) {
     $color = if ($component.Value -ge 90) { "#28a745" } elseif ($component.Value -ge 70) { "#ffc107" } else { "#dc3545" }
-    "                        <li style='color: $color;'>• $($component.Key): $($component.Value)%</li>"
+    $icon = if ($component.Value -ge 90) { "🟢" } elseif ($component.Value -ge 70) { "🟡" } else { "🔴" }
+    "                            <li style='color: $color; margin: 8px 0; display: flex; justify-content: space-between; align-items: center;'>
+                                <span>$icon $($component.Key)</span> 
+                                <span style='font-weight: bold; font-size: 1.1em;'>$($component.Value)%</span>
+                            </li>"
 })
-                    </ul>
-                </div>
-                <div class="stat-card">
-                    <h4>Issues by Severity</h4>
-                    <ul style="list-style: none; padding: 0;">
-                        <li style="color: #dc3545;">• Critical: $($healthScore.Issues.Critical)</li>
-                        <li style="color: #dc3545;">• Error: $($healthScore.Issues.Error)</li>
-                        <li style="color: #ffc107;">• Warning: $($healthScore.Issues.Warning)</li>
-                        <li style="color: #17a2b8;">• Info: $($healthScore.Issues.Info)</li>
-                    </ul>
+                        </ul>
+                    </div>
+                    <div class="stat-card">
+                        <h4>📈 Issues by Severity</h4>
+                        <ul style="list-style: none; padding: 0; margin: 0;">
+                            <li style="color: #dc3545; margin: 8px 0; display: flex; justify-content: space-between; align-items: center;">
+                                <span>🚨 Critical</span> 
+                                <span style="font-weight: bold; font-size: 1.2em;">$($healthScore.Issues.Critical)</span>
+                            </li>
+                            <li style="color: #dc3545; margin: 8px 0; display: flex; justify-content: space-between; align-items: center;">
+                                <span>❌ Error</span> 
+                                <span style="font-weight: bold; font-size: 1.2em;">$($healthScore.Issues.Error)</span>
+                            </li>
+                            <li style="color: #ffc107; margin: 8px 0; display: flex; justify-content: space-between; align-items: center;">
+                                <span>⚠️ Warning</span> 
+                                <span style="font-weight: bold; font-size: 1.2em;">$($healthScore.Issues.Warning)</span>
+                            </li>
+                            <li style="color: #17a2b8; margin: 8px 0; display: flex; justify-content: space-between; align-items: center;">
+                                <span>ℹ️ Info</span> 
+                                <span style="font-weight: bold; font-size: 1.2em;">$($healthScore.Issues.Info)</span>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -445,34 +706,48 @@ $(foreach ($component in $healthScore.ComponentScores.GetEnumerator()) {
     if ($Results.LogAnalysis -and $Results.LogAnalysis.Issues) {
         $html += @"
         <div class="section">
-            <h2>📝 Log Analysis</h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h4>Log Summary</h4>
-                    <p><strong>Total Entries:</strong> $($Results.LogAnalysis.Summary.TotalEntries)</p>
-                    <p><strong>Errors:</strong> $($Results.LogAnalysis.Summary.ErrorCount)</p>
-                    <p><strong>Warnings:</strong> $($Results.LogAnalysis.Summary.WarningCount)</p>
-                    <p><strong>Info:</strong> $($Results.LogAnalysis.Summary.InfoCount)</p>
-                </div>
+            <h2 onclick="toggleSection(this)">📝 Log Analysis ▼</h2>
+            <div class="section-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>📊 Log Summary</h4>
+                        <p><strong>Total Entries:</strong> $($Results.LogAnalysis.Summary.TotalEntries)</p>
+                        <p><strong>Errors:</strong> <span style="color: #dc3545; font-weight: bold;">$($Results.LogAnalysis.Summary.ErrorCount)</span></p>
+                        <p><strong>Warnings:</strong> <span style="color: #ffc107; font-weight: bold;">$($Results.LogAnalysis.Summary.WarningCount)</span></p>
+                        <p><strong>Info:</strong> <span style="color: #17a2b8; font-weight: bold;">$($Results.LogAnalysis.Summary.InfoCount)</span></p>
+                    </div>
 $(if ($Results.LogAnalysis.TimeRange.Start) {
 "                <div class='stat-card'>
-                    <h4>Time Range</h4>
+                    <h4>🕒 Time Range</h4>
                     <p><strong>From:</strong> $($Results.LogAnalysis.TimeRange.Start)</p>
                     <p><strong>To:</strong> $($Results.LogAnalysis.TimeRange.End)</p>
+                    <p><strong>Duration:</strong> $(((Get-Date $Results.LogAnalysis.TimeRange.End) - (Get-Date $Results.LogAnalysis.TimeRange.Start)).TotalHours.ToString('F1')) hours</p>
                 </div>"
 })
-            </div>
-            
-            <h3>Issues Found</h3>
-            <ul class="issue-list">
+                </div>
+                
+                <h3>🚨 Issues Found (Top 20)</h3>
+                <ul class="issue-list">
 $(foreach ($issue in ($Results.LogAnalysis.Issues | Select-Object -First 20)) {
     $cssClass = "issue-" + $issue.Severity.ToLower()
+    $icon = switch ($issue.Severity) {
+        "Critical" { "🚨" }
+        "Error" { "❌" }
+        "Warning" { "⚠️" }
+        default { "ℹ️" }
+    }
     "                <li class='issue-item $cssClass'>
-                    <strong>[$($issue.Severity)]</strong> $($issue.Message)
-                    $(if ($issue.Timestamp) { "<br><small>Time: $($issue.Timestamp)</small>" })
+                    <div style='display: flex; align-items: center; gap: 10px;'>
+                        <span style='font-size: 1.2em;'>$icon</span>
+                        <div>
+                            <strong>[$($issue.Severity)]</strong> $($issue.Message)
+                            $(if ($issue.Timestamp) { "<br><small style='color: #6c757d;'>🕒 $($issue.Timestamp)</small>" })
+                        </div>
+                    </div>
                 </li>"
 })
-            </ul>
+                </ul>
+            </div>
         </div>
 "@
     }
@@ -501,24 +776,79 @@ $(foreach ($issue in $securityAnalysis.SecurityIssues) {
     # Add recommendations section
     $html += @"
         <div class="section">
-            <h2>💡 Recommendations</h2>
-            <div class="recommendations">
-                <ul>
+            <h2 onclick="toggleSection(this)">💡 Recommendations & Action Items ▼</h2>
+            <div class="section-content">
+                <div class="recommendations">
+                    <h3>🎯 Priority Actions</h3>
+                    <ul style="margin: 0; padding-left: 20px;">
 $(foreach ($rec in $healthScore.Recommendations) {
-    "                    <li>$rec</li>"
+    "                        <li style='margin: 10px 0; padding: 5px 0;'>💡 $rec</li>"
 })
 $(if ($securityAnalysis.Recommendations) {
     foreach ($rec in $securityAnalysis.Recommendations) {
-        "                    <li>$rec</li>"
+        "                        <li style='margin: 10px 0; padding: 5px 0;'>🔒 $rec</li>"
     }
 })
-                </ul>
+                    </ul>
+                    
+                    <h3 style="margin-top: 25px;">📋 Next Steps</h3>
+                    <div style="background: rgba(255,255,255,0.8); padding: 15px; border-radius: 8px; margin-top: 10px;">
+                        <ol style="margin: 0; padding-left: 20px;">
+$(if ($healthScore.Issues.Critical -gt 0) {
+    "                            <li style='margin: 8px 0; color: #dc3545;'><strong>URGENT:</strong> Address all critical issues immediately</li>"
+})
+$(if ($healthScore.Issues.Error -gt 0) {
+    "                            <li style='margin: 8px 0; color: #dc3545;'>Resolve error-level issues within 24 hours</li>"
+})
+$(if ($healthScore.Issues.Warning -gt 0) {
+    "                            <li style='margin: 8px 0; color: #ffc107;'>Plan to address warning issues in next maintenance window</li>"
+})
+                            <li style="margin: 8px 0; color: #17a2b8;">Schedule regular health checks and monitoring</li>
+                            <li style="margin: 8px 0; color: #28a745;">Document any changes made for future reference</li>
+                        </ol>
+                    </div>
+                    
+                    $(if ($healthScore.OverallScore -lt 70) {
+                        "<div style='background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin-top: 15px;'>
+                            <h4 style='margin: 0 0 10px 0; color: #856404;'>⚠️ System Health Alert</h4>
+                            <p style='margin: 0; color: #856404;'>Your RocketChat instance requires attention. Consider engaging support team for assistance with critical issues.</p>
+                        </div>"
+                    })
+                </div>
             </div>
         </div>
         
         <div class="section">
-            <h2>📋 Detailed Analysis Data</h2>
-            <p>For detailed analysis data, please refer to the JSON export or contact your support team.</p>
+            <h2 onclick="toggleSection(this)">📋 Analysis Summary & Technical Details ▶</h2>
+            <div class="section-content" style="display: none;">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>📊 Analysis Coverage</h4>
+                        <p><strong>Components Analyzed:</strong> $(($Results.Keys | Where-Object { $_ -ne 'Summary' -and $_ -ne 'Timestamp' -and $_ -ne 'DumpPath' }).Count)</p>
+                        <p><strong>Data Sources:</strong> Logs, Settings, Statistics, Security</p>
+                        <p><strong>Analysis Depth:</strong> Comprehensive</p>
+                        <p><strong>Report Format:</strong> Executive HTML Report</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>🛠️ Support Information</h4>
+                        <p><strong>Tool Version:</strong> RocketChat Log Analyzer v1.2.0</p>
+                        <p><strong>Analysis Date:</strong> $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</p>
+                        <p><strong>Report Type:</strong> Professional Health Assessment</p>
+                        <p><strong>Export Formats:</strong> HTML, JSON, CSV, Console</p>
+                    </div>
+                </div>
+                
+                <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #007acc;">
+                    <h4 style="margin: 0 0 10px 0;">📞 Need Additional Support?</h4>
+                    <p style="margin: 0;">For complex issues or detailed analysis, consider:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Exporting detailed JSON report for technical teams</li>
+                        <li>Scheduling a consultation with RocketChat support</li>
+                        <li>Running additional diagnostics during maintenance windows</li>
+                        <li>Setting up continuous monitoring and alerting</li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 </body>
