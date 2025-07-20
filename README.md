@@ -74,6 +74,17 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 .\Analyze-RocketChatDump.ps1 -DumpPath "C:\Downloads\7.8.0-support-dump" -OutputFormat HTML -ExportPath "report.html"
 ```
 
+#### View HTML Report
+```powershell
+# Open the HTML report in default browser
+Start-Process "report.html"
+
+# Or specify a browser explicitly
+Start-Process "chrome.exe" "report.html"
+Start-Process "msedge.exe" "report.html"
+Start-Process "firefox.exe" "report.html"
+```
+
 #### Filter by Severity
 ```powershell
 .\Analyze-RocketChatDump.ps1 -DumpPath "C:\Downloads\7.8.0-support-dump" -Severity Error
@@ -89,6 +100,19 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 #### Generate HTML Report
 ```bash
 ./analyze-rocketchat-dump.sh --format html --output report.html /path/to/dump
+```
+
+#### View HTML Report
+```bash
+# On Linux/macOS - open in default browser
+xdg-open report.html    # Linux
+open report.html        # macOS
+
+# On Windows via WSL - open in Windows browser
+explorer.exe report.html
+
+# Or use PowerShell to open
+powershell.exe "Start-Process report.html"
 ```
 
 #### Filter by Severity
@@ -143,6 +167,43 @@ wsl bash ./analyze-rocketchat-dump.sh /mnt/c/Downloads/your-actual-dump
 ```
 
 **Note**: If you see `[ERROR] Dump path does not exist` messages, this is normal behavior when testing with non-existent paths. The error handling is working correctly!
+
+## 📊 Complete Workflow Examples
+
+### Generate and View Professional HTML Reports
+
+#### Example 1: Quick Analysis with Auto-Open Report
+```bash
+# Bash version - Generate report and open automatically
+./analyze-rocketchat-dump.sh --format html --output "rocketchat-analysis-$(date +%Y%m%d).html" /path/to/dump && \
+xdg-open "rocketchat-analysis-$(date +%Y%m%d).html"  # Linux
+# open "rocketchat-analysis-$(date +%Y%m%d).html"     # macOS
+```
+
+```powershell
+# PowerShell version - Generate report and open automatically
+$reportName = "rocketchat-analysis-$(Get-Date -Format 'yyyyMMdd-HHmm').html"
+.\Analyze-RocketChatDump.ps1 -DumpPath "C:\Downloads\7.8.0-support-dump" -OutputFormat HTML -ExportPath $reportName
+Start-Process $reportName
+```
+
+#### Example 2: Comprehensive Analysis for Presentations
+```bash
+# Generate detailed report with timestamp
+./analyze-rocketchat-dump.sh --format html --output "RocketChat-Health-Report-$(date +%Y-%m-%d).html" --verbose /path/to/dump
+
+# Open for viewing
+xdg-open "RocketChat-Health-Report-$(date +%Y-%m-%d).html"  # Linux
+```
+
+```powershell
+# PowerShell - Generate timestamped report
+$timestamp = Get-Date -Format "yyyy-MM-dd-HHmm"
+$reportPath = "RocketChat-Health-Report-$timestamp.html"
+.\Analyze-RocketChatDump.ps1 -DumpPath "C:\Downloads\7.8.0-support-dump" -OutputFormat HTML -ExportPath $reportPath -Verbose
+Write-Host "Report generated: $reportPath" -ForegroundColor Green
+Start-Process $reportPath
+```
 
 ## 📁 Project Structure
 

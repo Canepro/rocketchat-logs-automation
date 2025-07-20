@@ -35,7 +35,7 @@
 
 .NOTES
     Author: Support Engineering Team
-    Version: 1.0.0
+    Version: 1.2.0
     Requires: PowerShell 5.1 or later
 #>
 

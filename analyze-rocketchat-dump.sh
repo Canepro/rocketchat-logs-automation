@@ -10,7 +10,7 @@
 # Usage: ./analyze-rocketchat-dump.sh [OPTIONS] DUMP_PATH
 #
 # Author: Support Engineering Team
-# Version: 1.0.0
+# Version: 1.2.0
 # Requires: bash 4.0+, jq, grep, awk, sed
 #
 
