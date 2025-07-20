@@ -692,6 +692,20 @@ function New-HTMLReport {
             }
         }
         
+        function toggleSettingsCategory(categoryId) {
+            const content = document.getElementById(categoryId);
+            const header = content.previousElementSibling;
+            const arrow = header.querySelector('span:last-child');
+            
+            if (content.style.display === 'none' || content.style.display === '') {
+                content.style.display = 'block';
+                arrow.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                arrow.textContent = '▼';
+            }
+        }
+        
         // Add fade-in animation on load
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelector('.container').classList.add('fade-in');
@@ -702,7 +716,7 @@ function New-HTMLReport {
     <div class="container">
         <div class="header">
             <h1>🚀 RocketChat Support Dump Analysis Report</h1>
-            <p class="timestamp">Generated on $(Get-Date -Format "MMMM dd, yyyy 'at' HH:mm:ss")</p>
+            <p class="timestamp">Generated on $((Get-Date).ToString("MMMM dd, yyyy 'at' HH:mm:ss"))</p>
             <p><strong>Analysis Path:</strong> $($Results.DumpPath)</p>
         </div>
         
@@ -798,7 +812,7 @@ $(if ($Results.LogAnalysis.TimeRange.Start) {
                     <h4>🕒 Time Range</h4>
                     <p><strong>From:</strong> $($Results.LogAnalysis.TimeRange.Start)</p>
                     <p><strong>To:</strong> $($Results.LogAnalysis.TimeRange.End)</p>
-                    <p><strong>Duration:</strong> $(((Get-Date $Results.LogAnalysis.TimeRange.End) - (Get-Date $Results.LogAnalysis.TimeRange.Start)).TotalHours.ToString('F1')) hours</p>
+                    <p><strong>Duration:</strong> $(try { ([DateTime]$Results.LogAnalysis.TimeRange.End - [DateTime]$Results.LogAnalysis.TimeRange.Start).TotalHours.ToString('F1') } catch { "Unknown" }) hours</p>
                 </div>"
 })
                 </div>
@@ -920,6 +934,253 @@ $(foreach ($issue in $appsData.Issues) {
 })
                 </ul>"
 })
+            </div>
+        </div>
+"@
+    }
+
+    # Add expandable Settings section - Issue #14 Implementation
+    if ($Results.SettingsAnalysis) {
+        $settingsData = $Results.SettingsAnalysis
+        $totalSettings = 0
+        
+        # Use a more robust way to count properties for hashtables (cross-platform compatible)
+        $securitySettingsCount = 0
+        $performanceSettingsCount = 0
+        $generalSettingsCount = 0
+        
+        if ($settingsData.SecuritySettings) {
+            if ($settingsData.SecuritySettings -is [hashtable]) {
+                $securitySettingsCount = @($settingsData.SecuritySettings.Keys).Count
+            } else {
+                $securitySettingsCount = @($settingsData.SecuritySettings.PSObject.Properties | Where-Object MemberType -eq 'NoteProperty').Count
+            }
+        }
+        
+        if ($settingsData.PerformanceSettings) {
+            if ($settingsData.PerformanceSettings -is [hashtable]) {
+                $performanceSettingsCount = @($settingsData.PerformanceSettings.Keys).Count
+            } else {
+                $performanceSettingsCount = @($settingsData.PerformanceSettings.PSObject.Properties | Where-Object MemberType -eq 'NoteProperty').Count
+            }
+        }
+        
+        if ($settingsData.Settings) {
+            if ($settingsData.Settings -is [hashtable]) {
+                $generalSettingsCount = @($settingsData.Settings.Keys).Count
+            } else {
+                $generalSettingsCount = @($settingsData.Settings.PSObject.Properties | Where-Object MemberType -eq 'NoteProperty').Count
+            }
+        }
+        
+        $totalSettings = $securitySettingsCount + $performanceSettingsCount + $generalSettingsCount
+        $issuesCount = if ($settingsData.Issues) { $settingsData.Issues.Count } else { 0 }
+
+        $html += @"
+        <div class="section collapsible">
+            <h2 onclick="toggleSection(this)">⚙️ Configuration Settings ▼</h2>
+            <div class="section-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <span style="font-size: 2em;">📊</span>
+                            <div>
+                                <h3 style="margin: 0;">Total Settings</h3>
+                                <p style="margin: 0; font-size: 1.2em; font-weight: bold; color: #007acc;">$totalSettings</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <span style="font-size: 2em;">🔒</span>
+                            <div>
+                                <h3 style="margin: 0;">Security Settings</h3>
+                                <p style="margin: 0; font-size: 1.2em; font-weight: bold; color: #dc3545;">$securitySettingsCount</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <span style="font-size: 2em;">⚡</span>
+                            <div>
+                                <h3 style="margin: 0;">Performance Settings</h3>
+                                <p style="margin: 0; font-size: 1.2em; font-weight: bold; color: #28a745;">$performanceSettingsCount</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <span style="font-size: 2em;">$(if ($issuesCount -gt 0) { "⚠️" } else { "✅" })</span>
+                            <div>
+                                <h3 style="margin: 0;">Configuration Issues</h3>
+                                <p style="margin: 0; font-size: 1.2em; font-weight: bold; color: $(if ($issuesCount -gt 0) { "#ffc107" } else { "#28a745" });">$issuesCount</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+$(if ($issuesCount -gt 0) {
+"                <h3 style='color: #ffc107; display: flex; align-items: center; gap: 8px;'>
+                    <span>⚠️</span> Configuration Issues Found
+                </h3>
+                <ul class='issue-list'>
+$(foreach ($issue in $settingsData.Issues) {
+    $cssClass = "issue-" + $issue.Severity.ToLower()
+    $icon = switch ($issue.Severity) {
+        "Critical" { "🚨" }
+        "Error" { "❌" }
+        "Warning" { "⚠️" }
+        default { "ℹ️" }
+    }
+    "                <li class='issue-item $cssClass'>
+                    <div style='display: flex; align-items: center; gap: 10px;'>
+                        <span style='font-size: 1.2em;'>$icon</span>
+                        <div>
+                            <strong>[$($issue.Severity)]</strong> $($issue.Message)
+                            $(if ($issue.Setting) { "<br><small style='color: #6c757d;'>⚙️ Setting: $($issue.Setting)</small>" })
+                        </div>
+                    </div>
+                </li>"
+})
+                </ul>"
+})
+
+                <div style="margin-top: 30px;">
+                    <h3 style="display: flex; align-items: center; gap: 8px; color: #495057;">
+                        <span>📁</span> Settings Categories
+                    </h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0;">
+"@
+
+        # Add Security Settings Category
+        if ($settingsData.SecuritySettings -and $securitySettingsCount -gt 0) {
+            $html += @"
+                        <div style="border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="background: linear-gradient(90deg, #dc3545, #c82333); color: white; padding: 15px; cursor: pointer;" onclick="toggleSettingsCategory('security-settings')">
+                                <h4 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                                    <span>🔒</span> Security Settings ($securitySettingsCount)
+                                    <span style="margin-left: auto;">▼</span>
+                                </h4>
+                            </div>
+                            <div id="security-settings" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
+$(foreach ($setting in (@($settingsData.SecuritySettings.Keys) | Sort-Object)) {
+    $settingName = $setting
+    $settingValue = $settingsData.SecuritySettings[$settingName]
+    $displayValue = if ($settingValue -is [string] -and $settingValue.Length -gt 50) { 
+        $settingValue.Substring(0, 47) + "..." 
+    } elseif ($null -eq $settingValue) { 
+        "<em style='color: #6c757d;'>null</em>" 
+    } else { 
+        $settingValue 
+    }
+    "                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>
+                                    <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>
+                                    <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>
+                                </div>"
+})
+                            </div>
+                        </div>
+"@
+        }
+
+        # Add Performance Settings Category
+        if ($settingsData.PerformanceSettings -and $performanceSettingsCount -gt 0) {
+            $html += @"
+                        <div style="border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="background: linear-gradient(90deg, #28a745, #218838); color: white; padding: 15px; cursor: pointer;" onclick="toggleSettingsCategory('performance-settings')">
+                                <h4 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                                    <span>⚡</span> Performance Settings ($performanceSettingsCount)
+                                    <span style="margin-left: auto;">▼</span>
+                                </h4>
+                            </div>
+                            <div id="performance-settings" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
+$(foreach ($setting in (@($settingsData.PerformanceSettings.Keys) | Sort-Object)) {
+    $settingName = $setting
+    $settingValue = $settingsData.PerformanceSettings[$settingName]
+    $displayValue = if ($settingValue -is [string] -and $settingValue.Length -gt 50) { 
+        $settingValue.Substring(0, 47) + "..." 
+    } elseif ($null -eq $settingValue) { 
+        "<em style='color: #6c757d;'>null</em>" 
+    } else { 
+        $settingValue 
+    }
+    "                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>
+                                    <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>
+                                    <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>
+                                </div>"
+})
+                            </div>
+                        </div>
+"@
+        }
+
+        # Group general settings by category and add them
+        if ($settingsData.Settings -and $generalSettingsCount -gt 0) {
+            # Group settings by prefix
+            $settingGroups = @{}
+            @($settingsData.Settings.Keys) | ForEach-Object {
+                $settingName = $_
+                $prefix = if ($settingName -match '^([^_]+)_') { $matches[1] } else { "General" }
+                if (-not $settingGroups.ContainsKey($prefix)) {
+                    $settingGroups[$prefix] = @()
+                }
+                $settingGroups[$prefix] += $settingName
+            }
+
+            # Display top 6 categories
+            $topCategories = $settingGroups.GetEnumerator() | Sort-Object { $_.Value.Count } -Descending | Select-Object -First 6
+            foreach ($category in $topCategories) {
+                $categoryName = $category.Key
+                $categorySettings = $category.Value
+                $categoryCount = $categorySettings.Count
+                $categoryId = "general-$($categoryName.ToLower())-settings"
+                
+                $categoryIcon = switch ($categoryName) {
+                    "Accounts" { "👤" }
+                    "LDAP" { "🔐" }
+                    "SAML" { "🔑" }
+                    "FileUpload" { "📁" }
+                    "Email" { "📧" }
+                    "Omnichannel" { "💬" }
+                    "Message" { "💭" }
+                    "Layout" { "🎨" }
+                    "API" { "🔌" }
+                    "Push" { "📱" }
+                    default { "⚙️" }
+                }
+
+                $html += @"
+                        <div style="border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="background: linear-gradient(90deg, #007acc, #0056b3); color: white; padding: 15px; cursor: pointer;" onclick="toggleSettingsCategory('$categoryId')">
+                                <h4 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                                    <span>$categoryIcon</span> $categoryName Settings ($categoryCount)
+                                    <span style="margin-left: auto;">▼</span>
+                                </h4>
+                            </div>
+                            <div id="$categoryId" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
+$(foreach ($settingName in ($categorySettings | Sort-Object)) {
+    $settingValue = $settingsData.Settings.$settingName
+    $displayValue = if ($settingValue -is [string] -and $settingValue.Length -gt 50) { 
+        $settingValue.Substring(0, 47) + "..." 
+    } elseif ($null -eq $settingValue) { 
+        "<em style='color: #6c757d;'>null</em>" 
+    } else { 
+        $settingValue 
+    }
+    "                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>
+                                    <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>
+                                    <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>
+                                </div>"
+})
+                            </div>
+                        </div>
+"@
+            }
+        }
+
+        $html += @"
+                    </div>
+                </div>
             </div>
         </div>
 "@

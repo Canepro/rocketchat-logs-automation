@@ -164,7 +164,15 @@ function Get-DumpFiles {
     if (Test-Path $Path -PathType Container) {
         # Directory - look for standard dump files
         $files.Log = Get-ChildItem -Path $Path -Filter "*log*.json" | Select-Object -First 1
-        $files.Settings = Get-ChildItem -Path $Path -Filter "*settings*.json" | Select-Object -First 1
+        
+        # Prioritize main settings file over omnichannel settings
+        $files.Settings = Get-ChildItem -Path $Path -Filter "*settings*.json" | 
+                         Where-Object { $_.Name -notlike "*omnichannel*" } | 
+                         Select-Object -First 1
+        if (-not $files.Settings) {
+            $files.Settings = Get-ChildItem -Path $Path -Filter "*settings*.json" | Select-Object -First 1
+        }
+        
         $files.Statistics = Get-ChildItem -Path $Path -Filter "*statistics*.json" | Select-Object -First 1
         $files.Omnichannel = Get-ChildItem -Path $Path -Filter "*omnichannel*.json" | Select-Object -First 1
         $files.Apps = Get-ChildItem -Path $Path -Filter "*apps*.json" | Select-Object -First 1
