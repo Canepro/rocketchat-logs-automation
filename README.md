@@ -2,9 +2,12 @@
 
 A comprehensive automation tool for analyzing RocketChat support dumps and system logs. Available in both **PowerShell** and **Bash** versions to support different environments and preferences. This tool helps support engineers quickly identify issues, analyze performance metrics, and generate detailed reports from RocketChat support data.
 
+**✅ Production Ready** - Successfully tested with real RocketChat 7.8.0 support dumps
+**🔧 Latest Updates** - Enhanced with comprehensive analysis, improved JSON serialization, and cleanup utilities
+
 ## 🚀 Features
 
-### 📊 **Professional HTML Reports (NEW!)**
+### 📊 **Professional HTML Reports**
 - **Modern responsive design** with gradient backgrounds and professional styling
 - **Interactive collapsible sections** for detailed exploration
 - **Executive summary** with immediate health assessment and recommendations
@@ -321,12 +324,58 @@ Write-Host "Report generated: $reportPath" -ForegroundColor Green
 Start-Process $reportPath
 ```
 
+## 🧹 Cleanup Utility
+
+The `Clean-AnalyzerOutputs.ps1` utility helps you manage generated reports and temporary files:
+
+### Basic Cleanup Commands
+
+```powershell
+# Clean all generated report files (HTML, JSON, CSV)
+.\Clean-AnalyzerOutputs.ps1 -CleanReports
+
+# Clean test outputs and temporary files
+.\Clean-AnalyzerOutputs.ps1 -CleanTests
+
+# Clean everything (reports, tests, temporary files)
+.\Clean-AnalyzerOutputs.ps1 -CleanAll
+
+# Preview what would be deleted without actually deleting
+.\Clean-AnalyzerOutputs.ps1 -CleanAll -WhatIf
+
+# Clean without confirmation prompts
+.\Clean-AnalyzerOutputs.ps1 -CleanReports -Force
+```
+
+### Advanced Usage
+
+```powershell
+# Clean specific directory
+.\Clean-AnalyzerOutputs.ps1 -CleanReports -OutputPath "C:\Reports" -Force
+
+# See what files would be deleted
+.\Clean-AnalyzerOutputs.ps1 -CleanAll -WhatIf
+```
+
+### File Types Cleaned
+
+- **Reports**: `*-report*.html`, `*-analysis*.json`, `*-issues*.csv`, `*dump*.html/json/csv`
+- **Tests**: `test-*.json/html/csv`, `*-test-*.json/html/csv`, `temp-*.json`, `debug-*.log`
+- **Temporary**: `*.tmp`, `*.temp`, `temp_*`, `.temp*`, `*_backup_*`
+
+The cleanup utility provides:
+- 🔍 **Safe preview** with `-WhatIf` parameter
+- 📊 **Size reporting** showing space freed
+- ⚡ **Selective cleanup** by file category
+- 🛡️ **Confirmation prompts** (unless `-Force` is used)
+
 ## 📁 Project Structure
 
 ```
 Rocketchat_Logs_Automation/
 ├── Analyze-RocketChatDump.ps1    # Main PowerShell analysis script
 ├── analyze-rocketchat-dump.sh    # Main Bash analysis script
+├── Clean-AnalyzerOutputs.ps1     # Cleanup utility for generated files
 ├── analyze-bash.bat              # Windows wrapper for bash version (via WSL)
 ├── Test-Analyzer.ps1             # PowerShell test script
 ├── test-analyzer.sh              # Bash test script
@@ -338,6 +387,11 @@ Rocketchat_Logs_Automation/
 │   └── analysis-rules.json        # Analysis rules and thresholds
 ├── examples/                      # Usage examples and documentation
 │   └── usage-examples.md          # Detailed usage examples
+├── tests/                         # Test fixtures and test scripts
+│   ├── fixtures/                  # Sample test data
+│   ├── results/                   # Test output results
+│   └── *.ps1, *.sh               # Test scripts
+├── QUICK-START.md                 # Quick start guide with examples
 ├── COMPARISON.md                  # PowerShell vs Bash comparison
 └── README.md                      # This file
 ```
@@ -546,6 +600,39 @@ This tool is designed for RocketChat support teams. To contribute:
 3. Test your changes thoroughly
 4. Submit a pull request with detailed description
 
+## 🆕 Recent Updates (July 2025)
+
+### ✅ Production Testing Completed
+- **Successfully tested** with real RocketChat 7.8.0 support dumps
+- **Verified functionality** across all output formats (Console, JSON, CSV, HTML)
+- **Confirmed issue detection** with 4 warning-level issues found in production data
+
+### 🔧 Latest Enhancements
+- **Enhanced pipeline control** with improved error handling and debug output
+- **Fixed JSON serialization** issues in PowerShell modules (hashtable conversion)
+- **Comprehensive function documentation** with detailed help text and examples
+- **Advanced analysis capabilities** for Omnichannel, Apps, and Security settings
+
+### 🧹 New Cleanup Utility
+- **`Clean-AnalyzerOutputs.ps1`** utility for managing generated files
+- **Selective cleanup** by file type (reports, tests, temporary files)
+- **Safe preview mode** with `-WhatIf` parameter
+- **Size reporting** showing disk space freed
+
+### 🐛 Bug Fixes
+- Resolved PowerShell pipeline control issues
+- Fixed JSON export hashtable serialization errors
+- Enhanced error handling throughout all modules
+- Improved file detection patterns for real support dumps
+
+### 📊 Verified Components
+- ✅ Log Analysis: Error and pattern detection working
+- ✅ Settings Analysis: Security and performance validation
+- ✅ Statistics Analysis: Server metrics and resource usage
+- ✅ Apps Analysis: Version checking and status validation
+- ✅ Omnichannel Analysis: Configuration review
+- ✅ All Export Formats: Console, JSON, CSV, and HTML reports
+
 ## 📝 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
@@ -565,9 +652,10 @@ For questions or issues related to this tool:
 
 ---
 
-**Version**: 1.2.0  
+**Version**: 1.3.0  
 **Last Updated**: 2025-07-20  
 **Compatibility**: RocketChat 3.0+ support dumps
+**Production Tested**: ✅ RocketChat 7.8.0
 
 ## 🌟 Star this Repository
 If you find this tool helpful, please consider giving it a ⭐ on GitHub!
