@@ -1352,14 +1352,29 @@ generate_csv_report() {
 
 # Function to generate HTML report
 generate_html_report() {
-    local health_score=${HEALTH_SCORE[overall]}
-    local score_class
+    local health_score=${HEALTH_SCORE[overall]:-50}
+    local total_issues=${HEALTH_SCORE[total_issues]:-0}
+    local score_class=""
+    local score_icon=""
+    local score_description=""
+    
+    # Determine health score styling
     if [[ $health_score -ge 90 ]]; then
         score_class="score-excellent"
+        score_icon="🟢"
+        score_description="Excellent - System is healthy"
     elif [[ $health_score -ge 70 ]]; then
         score_class="score-good"
+        score_icon="🟡"
+        score_description="Good - Minor issues detected"
+    elif [[ $health_score -ge 50 ]]; then
+        score_class="score-warning"
+        score_icon="🟠"
+        score_description="Warning - Several issues need attention"
     else
         score_class="score-poor"
+        score_icon="🔴"
+        score_description="Critical - Immediate attention required"
     fi
     
     cat << EOF
@@ -1370,88 +1385,586 @@ generate_html_report() {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RocketChat Support Dump Analysis Report</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .header { text-align: center; color: #333; border-bottom: 2px solid #007acc; padding-bottom: 20px; margin-bottom: 30px; }
-        .header h1 { color: #007acc; margin: 0; }
-        .section { margin-bottom: 30px; }
-        .section h2 { color: #333; border-left: 4px solid #007acc; padding-left: 15px; }
-        .health-score { display: flex; justify-content: space-around; text-align: center; margin: 20px 0; }
-        .score-card { background-color: #f8f9fa; padding: 20px; border-radius: 8px; min-width: 150px; }
-        .score-excellent { background-color: #d4edda; border-left: 4px solid #28a745; }
-        .score-good { background-color: #fff3cd; border-left: 4px solid #ffc107; }
-        .score-poor { background-color: #f8d7da; border-left: 4px solid #dc3545; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }
-        .stat-card { background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #dee2e6; }
-        .timestamp { color: #6c757d; font-size: 0.9em; }
-        .issue-list { list-style: none; padding: 0; }
-        .issue-item { padding: 10px; margin: 5px 0; border-radius: 4px; border-left: 4px solid #ffc107; background-color: #fff3cd; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            line-height: 1.6; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 15px; 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header { 
+            background: linear-gradient(135deg, #2196F3 0%, #21CBF3 100%);
+            color: white; 
+            padding: 40px 30px; 
+            text-align: center;
+            position: relative;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7);
+        }
+        .header h1 { 
+            font-size: 2.5em; 
+            margin-bottom: 10px; 
+            font-weight: 300; 
+        }
+        .header .subtitle { 
+            font-size: 1.1em; 
+            opacity: 0.9; 
+            margin-bottom: 5px;
+        }
+        .header .dump-path { 
+            font-size: 0.9em; 
+            opacity: 0.8; 
+            font-family: monospace;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .content { padding: 30px; }
+        .section { 
+            margin-bottom: 40px; 
+            background: #fafafa; 
+            border-radius: 12px; 
+            padding: 25px;
+            border: 1px solid #e0e0e0;
+        }
+        .section h2 { 
+            color: #2c3e50; 
+            margin-bottom: 20px; 
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .health-overview { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 25px; 
+            margin-bottom: 30px;
+        }
+        .health-card { 
+            background: white; 
+            border-radius: 12px; 
+            padding: 25px; 
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+            transition: transform 0.2s ease;
+        }
+        .health-card:hover { transform: translateY(-2px); }
+        .score-excellent { border-left: 6px solid #27ae60; }
+        .score-good { border-left: 6px solid #f39c12; }
+        .score-warning { border-left: 6px solid #e67e22; }
+        .score-poor { border-left: 6px solid #e74c3c; }
+        .health-score-display { 
+            font-size: 3.5em; 
+            font-weight: bold; 
+            margin: 15px 0;
+        }
+        .score-excellent .health-score-display { color: #27ae60; }
+        .score-good .health-score-display { color: #f39c12; }
+        .score-warning .health-score-display { color: #e67e22; }
+        .score-poor .health-score-display { color: #e74c3c; }
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+            gap: 20px;
+        }
+        .stat-card { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px; 
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .stat-card h4 { 
+            color: #2c3e50; 
+            margin-bottom: 15px; 
+            font-size: 1.2em;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
+        .stat-row { 
+            display: flex; 
+            justify-content: space-between; 
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { font-weight: 600; color: #555; }
+        .stat-value { 
+            font-weight: bold; 
+            color: #2c3e50;
+            background: #ecf0f1;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .issue-section { margin-top: 25px; }
+        .issue-card { 
+            background: white; 
+            border-radius: 8px; 
+            padding: 15px; 
+            margin: 10px 0;
+            border-left: 4px solid #e74c3c;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .issue-card.warning { border-left-color: #f39c12; }
+        .issue-card.info { border-left-color: #3498db; }
+        .issue-header { 
+            font-weight: bold; 
+            color: #2c3e50; 
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .issue-details { 
+            color: #555; 
+            font-size: 0.95em;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+        .recommendations { 
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white; 
+            border-radius: 10px; 
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .recommendations h3 { margin-bottom: 15px; }
+        .recommendations ul { margin-left: 20px; }
+        .recommendations li { margin: 8px 0; }
+        .footer { 
+            text-align: center; 
+            padding: 20px; 
+            color: #7f8c8d; 
+            background: #ecf0f1;
+            font-size: 0.9em;
+        }
+        .badge { 
+            display: inline-block; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 0.8em; 
+            font-weight: bold;
+            margin: 2px;
+        }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .collapsible { 
+            cursor: pointer; 
+            background: #f1f3f4; 
+            padding: 15px; 
+            border: none; 
+            text-align: left; 
+            width: 100%;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+        .collapsible:hover { background: #e8eaed; }
+        .collapsible-content { 
+            max-height: 0; 
+            overflow: hidden; 
+            transition: max-height 0.3s ease;
+            background: white;
+            border-radius: 0 0 8px 8px;
+        }
+        .collapsible-content.active { 
+            max-height: 1000px; 
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-top: none;
+        }
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2em; }
+            .health-overview { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .content { padding: 20px; }
+        }
     </style>
+    <script>
+        function toggleCollapsible(element) {
+            element.classList.toggle('active');
+            const content = element.nextElementSibling;
+            content.classList.toggle('active');
+        }
+        
+        function initializeReport() {
+            // Auto-expand critical sections
+            const criticalSections = document.querySelectorAll('.collapsible');
+            criticalSections.forEach(section => {
+                section.addEventListener('click', function() {
+                    toggleCollapsible(this);
+                });
+            });
+        }
+        
+        window.onload = initializeReport;
+    </script>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🚀 RocketChat Support Dump Analysis Report</h1>
-            <p class="timestamp">Generated on $(date '+%B %d, %Y at %H:%M:%S') (Bash Version)</p>
-            <p><strong>Dump Path:</strong> $DUMP_PATH</p>
+            <div class="subtitle">Generated on $(date '+%B %d, %Y at %H:%M:%S') (Bash Version 1.2.0)</div>
+            <div class="dump-path">📁 $DUMP_PATH</div>
         </div>
         
-        <div class="section">
-            <h2>📊 Health Overview</h2>
-            <div class="health-score">
-                <div class="score-card $score_class">
-                    <h3>Overall Health</h3>
-                    <div style="font-size: 2em; font-weight: bold;">${health_score}%</div>
-                </div>
-                <div class="score-card">
-                    <h3>Total Issues</h3>
-                    <div style="font-size: 2em; font-weight: bold;">${HEALTH_SCORE[total_issues]}</div>
+        <div class="content">
+            <!-- Health Overview -->
+            <div class="section">
+                <h2>📊 Health Overview</h2>
+                <div class="health-overview">
+                    <div class="health-card $score_class">
+                        <h3>$score_icon Overall Health Score</h3>
+                        <div class="health-score-display">${health_score}%</div>
+                        <p><strong>$score_description</strong></p>
+                        <div style="margin-top: 10px;">
+                            <span class="badge badge-info">Component Health: ${HEALTH_SCORE[component_health]:-"N/A"}</span>
+                        </div>
+                    </div>
+                    <div class="health-card">
+                        <h3>🚨 Issues Detected</h3>
+                        <div class="health-score-display" style="color: #e74c3c;">$total_issues</div>
+                        <p>Total issues found across all components</p>
+                        <div style="margin-top: 10px;">
+                            <span class="badge badge-danger">Errors: ${ANALYSIS_RESULTS[log_error_count]:-0}</span>
+                            <span class="badge badge-warning">Warnings: ${ANALYSIS_RESULTS[log_warning_count]:-0}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 EOF
 
-    # Add log analysis section if available
+    # Add detailed log analysis section
     if [[ -n "${ANALYSIS_RESULTS[log_total_entries]:-}" ]]; then
         cat << EOF
-        <div class="section">
-            <h2>📝 Log Analysis</h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h4>Log Summary</h4>
-                    <p><strong>Total Entries:</strong> ${ANALYSIS_RESULTS[log_total_entries]}</p>
-                    <p><strong>Errors:</strong> ${ANALYSIS_RESULTS[log_error_count]}</p>
-                    <p><strong>Warnings:</strong> ${ANALYSIS_RESULTS[log_warning_count]}</p>
-                    <p><strong>Info:</strong> ${ANALYSIS_RESULTS[log_info_count]}</p>
+            <!-- Log Analysis Section -->
+            <div class="section">
+                <h2>📝 Log Analysis</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>📊 Log Summary</h4>
+                        <div class="stat-row">
+                            <span class="stat-label">Total Entries:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[log_total_entries]}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">🔴 Errors:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[log_error_count]}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">🟡 Warnings:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[log_warning_count]}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">ℹ️ Info:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[log_info_count]}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">⚠️ Issues Found:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[log_issues_found]}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <h4>🔍 Analysis Details</h4>
+                        <div class="stat-row">
+                            <span class="stat-label">File:</span>
+                            <span class="stat-value">$(basename "${DUMP_FILES[log]}")</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Format:</span>
+                            <span class="stat-value">JSON</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Error Rate:</span>
+                            <span class="stat-value">$(( ${ANALYSIS_RESULTS[log_error_count]:-0} * 100 / ${ANALYSIS_RESULTS[log_total_entries]:-1} ))%</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Health Status:</span>
+                            <span class="stat-value">$(
+                                local error_rate=$(( ${ANALYSIS_RESULTS[log_error_count]:-0} * 100 / ${ANALYSIS_RESULTS[log_total_entries]:-1} ))
+                                if [[ $error_rate -lt 1 ]]; then echo "✅ Healthy"
+                                elif [[ $error_rate -lt 5 ]]; then echo "⚠️ Minor Issues"
+                                else echo "❌ Needs Attention"; fi
+                            )</span>
+                        </div>
+                    </div>
+                </div>
+EOF
+
+        # Add issue details if they exist
+        if [[ -f "${SCRIPT_DIR}/.tmp_error_issues" ]]; then
+            local error_content=$(cat "${SCRIPT_DIR}/.tmp_error_issues" 2>/dev/null | head -10)
+            if [[ -n "$error_content" ]]; then
+                cat << EOF
+                <button class="collapsible">🔴 Error Details (Click to expand)</button>
+                <div class="collapsible-content">
+                    <div class="issue-section">
+EOF
+                while IFS= read -r line; do
+                    [[ -z "$line" ]] && continue
+                    cat << EOF
+                        <div class="issue-card">
+                            <div class="issue-header">🔴 Error Found</div>
+                            <div class="issue-details">$line</div>
+                        </div>
+EOF
+                done <<< "$error_content"
+                
+                cat << EOF
+                    </div>
+                </div>
+EOF
+            fi
+        fi
+        
+        echo "            </div>"
+    fi
+
+    # Add comprehensive statistics section
+    if [[ -n "${ANALYSIS_RESULTS[stats_version]:-}" ]]; then
+        cat << EOF
+            <!-- Server Statistics Section -->
+            <div class="section">
+                <h2>📈 Server Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>🖥️ System Information</h4>
+                        <div class="stat-row">
+                            <span class="stat-label">RocketChat Version:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[stats_version]}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Node.js Version:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[stats_node_version]:-"N/A"}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Platform:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[stats_platform]:-"N/A"}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Architecture:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[stats_arch]:-"N/A"}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Uptime:</span>
+                            <span class="stat-value">$(
+                                local uptime=${ANALYSIS_RESULTS[stats_uptime]:-0}
+                                # Force decimal interpretation
+                                uptime=$((10#$uptime))
+                                local days=$((uptime / 86400))
+                                local hours=$(((uptime % 86400) / 3600))
+                                echo "${days}d ${hours}h"
+                            )</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <h4>💾 Memory & Performance</h4>
+                        <div class="stat-row">
+                            <span class="stat-label">Total Memory:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[stats_memory_mb]:-0} MB</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Free Memory:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[stats_memory_free_mb]:-0} MB</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Heap Used:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[stats_heap_used_mb]:-0} MB</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Memory Usage:</span>
+                            <span class="stat-value">$(
+                                local total=${ANALYSIS_RESULTS[stats_memory_mb]:-1}
+                                local free=${ANALYSIS_RESULTS[stats_memory_free_mb]:-0}
+                                local used=$((total - free))
+                                local usage_pct=$((used * 100 / total))
+                                echo "${usage_pct}%"
+                            )</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <h4>👥 User Statistics</h4>
+                        <div class="stat-row">
+                            <span class="stat-label">Total Users:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[stats_total_users]:-0}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Online Users:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[stats_online_users]:-0}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Away Users:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[stats_away_users]:-0}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Total Rooms:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[stats_total_rooms]:-0}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Total Messages:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[stats_total_messages]:-0}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 EOF
     fi
 
-    # Add statistics section if available
-    if [[ -n "${ANALYSIS_RESULTS[stats_version]:-}" ]]; then
+    # Add settings analysis if available
+    if [[ -n "${ANALYSIS_RESULTS[settings_total]:-}" ]]; then
         cat << EOF
-        <div class="section">
-            <h2>📈 Server Statistics</h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h4>Server Info</h4>
-                    <p><strong>Version:</strong> ${ANALYSIS_RESULTS[stats_version]}</p>
-                    <p><strong>Memory:</strong> ${ANALYSIS_RESULTS[stats_memory_mb]}MB</p>
-                    <p><strong>Users:</strong> ${ANALYSIS_RESULTS[stats_total_users]} total, ${ANALYSIS_RESULTS[stats_online_users]} online</p>
-                    <p><strong>Messages:</strong> ${ANALYSIS_RESULTS[stats_total_messages]} total</p>
+            <!-- Settings Analysis Section -->
+            <div class="section">
+                <h2>⚙️ Configuration Analysis</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>📋 Settings Overview</h4>
+                        <div class="stat-row">
+                            <span class="stat-label">Total Settings:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[settings_total]}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">🔒 Security Issues:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[settings_security_issues]}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">⚡ Performance Issues:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[settings_performance_issues]}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">⚠️ Config Warnings:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[settings_configuration_warnings]}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 EOF
+    fi
+
+    # Add apps analysis if available
+    if [[ -n "${ANALYSIS_RESULTS[apps_total]:-}" ]]; then
+        cat << EOF
+            <!-- Apps Analysis Section -->
+            <div class="section">
+                <h2>🔌 Apps & Integrations</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>📱 Installed Apps</h4>
+                        <div class="stat-row">
+                            <span class="stat-label">Total Apps:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[apps_total]}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">✅ Enabled:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[apps_enabled]}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">❌ Disabled:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[apps_disabled]}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">⚠️ Outdated:</span>
+                            <span class="stat-value">${ANALYSIS_RESULTS[apps_outdated]}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+EOF
+    fi
+
+    # Add recommendations section
+    cat << EOF
+            <!-- Recommendations Section -->
+            <div class="section">
+                <h2>💡 Recommendations</h2>
+                <div class="recommendations">
+                    <h3>🎯 Action Items</h3>
+                    <ul>
+EOF
+
+    # Generate dynamic recommendations based on analysis
+    if [[ ${ANALYSIS_RESULTS[log_error_count]:-0} -gt 0 ]]; then
+        echo "                        <li>🔍 <strong>Review Error Logs:</strong> Found ${ANALYSIS_RESULTS[log_error_count]} errors that need investigation</li>"
+    fi
+    
+    if [[ ${ANALYSIS_RESULTS[settings_security_issues]:-0} -gt 0 ]]; then
+        echo "                        <li>🔒 <strong>Security Review:</strong> ${ANALYSIS_RESULTS[settings_security_issues]} security configuration issues detected</li>"
+    fi
+    
+    local memory_usage_pct=0
+    if [[ -n "${ANALYSIS_RESULTS[stats_memory_mb]:-}" && ${ANALYSIS_RESULTS[stats_memory_mb]} -gt 0 ]]; then
+        local total=${ANALYSIS_RESULTS[stats_memory_mb]}
+        local free=${ANALYSIS_RESULTS[stats_memory_free_mb]:-0}
+        local used=$((total - free))
+        memory_usage_pct=$((used * 100 / total))
+        
+        if [[ $memory_usage_pct -gt 85 ]]; then
+            echo "                        <li>💾 <strong>Memory Optimization:</strong> High memory usage detected (${memory_usage_pct}%)</li>"
+        fi
+    fi
+    
+    if [[ $health_score -lt 70 ]]; then
+        echo "                        <li>⚠️ <strong>System Health:</strong> Overall health score is below recommended threshold</li>"
     fi
 
     cat << EOF
-        <div class="section">
-            <h2>💡 Summary</h2>
-            <p>Analysis completed using the bash version of the RocketChat Support Dump Analyzer.</p>
-            <p>For detailed issue tracking and additional analysis, please refer to the CSV or JSON exports.</p>
+                        <li>📊 <strong>Regular Monitoring:</strong> Schedule regular health checks using this tool</li>
+                        <li>📋 <strong>Documentation:</strong> Document any recurring issues for pattern analysis</li>
+                        <li>🔄 <strong>Updates:</strong> Keep RocketChat and dependencies up to date</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Summary Section -->
+            <div class="section">
+                <h2>📋 Executive Summary</h2>
+                <div class="stat-card">
+                    <h4>🎯 Key Findings</h4>
+                    <p><strong>Overall Assessment:</strong> $score_description</p>
+                    <p><strong>Analysis Scope:</strong> 
+                        $(if [[ -n "${DUMP_FILES[log]:-}" ]]; then echo "✅ Logs"; else echo "❌ Logs"; fi) | 
+                        $(if [[ -n "${DUMP_FILES[statistics]:-}" ]]; then echo "✅ Statistics"; else echo "❌ Statistics"; fi) | 
+                        $(if [[ -n "${DUMP_FILES[settings]:-}" ]]; then echo "✅ Settings"; else echo "❌ Settings"; fi) | 
+                        $(if [[ -n "${DUMP_FILES[apps]:-}" ]]; then echo "✅ Apps"; else echo "❌ Apps"; fi)
+                    </p>
+                    <p><strong>Generated:</strong> $(date '+%Y-%m-%d %H:%M:%S')</p>
+                    <p><strong>Tool Version:</strong> RocketChat Support Dump Analyzer v1.2.0 (Bash)</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Generated by RocketChat Support Dump Analyzer v1.2.0 | For detailed analysis, export to JSON or CSV format</p>
+            <p>💡 <strong>Tip:</strong> Click on expandable sections above to view detailed information</p>
         </div>
     </div>
 </body>
