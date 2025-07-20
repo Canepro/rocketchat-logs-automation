@@ -1,0 +1,48 @@
+{
+  "users": [
+    {
+      "_id": "user001",
+      "username": "admin",
+      "name": "System Administrator",
+      "emails": [{"address": "admin@company.local", "verified": true}],
+      "roles": ["admin"],
+      "status": "online",
+      "active": true,
+      "type": "user",
+      "createdAt": {"$date": "2023-01-15T08:00:00.000Z"},
+      "lastLogin": {"$date": "2024-01-15T08:00:00.000Z"}
+    }
+  ],
+  "channels": [
+    {
+      "_id": "channel001",
+      "name": "general",
+      "fname": "general",
+      "description": "General discussion channel",
+      "broadcast": false,
+      "encrypted": false,
+      "type": "c",
+      "createdAt": {"$date": "2023-01-15T08:00:00.000Z"},
+      "msgs": 1250,
+      "usersCount": 3,
+      "default": true
+    }
+  ],
+  "messages": [
+    {
+      "_id": "msg001",
+      "rid": "channel001",
+      "msg": "Welcome to the general channel!",
+      "ts": {"$date": "2023-01-15T08:05:00.000Z"},
+      "u": {
+        "_id": "user001",
+        "username": "admin",
+        "name": "System Administrator"
+      },
+      "_updatedAt": {"$date": "2023-01-15T08:05:00.000Z"},
+      "urls": [],
+      "mentions": [],
+      "channels": []
+    }
+  ]
+}

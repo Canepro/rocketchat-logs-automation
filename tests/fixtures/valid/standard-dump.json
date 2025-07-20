@@ -1,0 +1,128 @@
+{
+  "users": [
+    {
+      "_id": "user001",
+      "username": "admin",
+      "name": "System Administrator",
+      "emails": [{"address": "admin@company.local", "verified": true}],
+      "roles": ["admin"],
+      "status": "online",
+      "active": true,
+      "type": "user",
+      "createdAt": {"$date": "2023-01-15T08:00:00.000Z"},
+      "lastLogin": {"$date": "2024-01-15T08:00:00.000Z"}
+    },
+    {
+      "_id": "user002",
+      "username": "john.doe",
+      "name": "John Doe",
+      "emails": [{"address": "john.doe@company.local", "verified": true}],
+      "roles": ["user"],
+      "status": "offline",
+      "active": true,
+      "type": "user",
+      "createdAt": {"$date": "2023-02-01T09:00:00.000Z"},
+      "lastLogin": {"$date": "2024-01-14T17:30:00.000Z"}
+    },
+    {
+      "_id": "user003",
+      "username": "jane.smith",
+      "name": "Jane Smith",
+      "emails": [{"address": "jane.smith@company.local", "verified": true}],
+      "roles": ["user"],
+      "status": "online",
+      "active": true,
+      "type": "user",
+      "createdAt": {"$date": "2023-02-15T10:00:00.000Z"},
+      "lastLogin": {"$date": "2024-01-15T07:45:00.000Z"}
+    }
+  ],
+  "channels": [
+    {
+      "_id": "channel001",
+      "name": "general",
+      "fname": "general",
+      "description": "General discussion channel",
+      "broadcast": false,
+      "encrypted": false,
+      "type": "c",
+      "createdAt": {"$date": "2023-01-15T08:00:00.000Z"},
+      "msgs": 1250,
+      "usersCount": 3,
+      "default": true
+    },
+    {
+      "_id": "channel002",
+      "name": "support",
+      "fname": "support",
+      "description": "Technical support discussions",
+      "broadcast": false,
+      "encrypted": false,
+      "type": "c",
+      "createdAt": {"$date": "2023-01-20T09:00:00.000Z"},
+      "msgs": 450,
+      "usersCount": 2,
+      "default": false
+    },
+    {
+      "_id": "channel003",
+      "name": "announcements",
+      "fname": "announcements",
+      "description": "Company announcements",
+      "broadcast": true,
+      "encrypted": false,
+      "type": "c",
+      "createdAt": {"$date": "2023-01-25T10:00:00.000Z"},
+      "msgs": 25,
+      "usersCount": 3,
+      "default": false
+    }
+  ],
+  "messages": [
+    {
+      "_id": "msg001",
+      "rid": "channel001",
+      "msg": "Welcome to the general channel!",
+      "ts": {"$date": "2023-01-15T08:05:00.000Z"},
+      "u": {
+        "_id": "user001",
+        "username": "admin",
+        "name": "System Administrator"
+      },
+      "_updatedAt": {"$date": "2023-01-15T08:05:00.000Z"},
+      "urls": [],
+      "mentions": [],
+      "channels": []
+    },
+    {
+      "_id": "msg002",
+      "rid": "channel001",
+      "msg": "Thanks for the welcome! Looking forward to collaborating.",
+      "ts": {"$date": "2023-01-15T08:10:00.000Z"},
+      "u": {
+        "_id": "user002",
+        "username": "john.doe",
+        "name": "John Doe"
+      },
+      "_updatedAt": {"$date": "2023-01-15T08:10:00.000Z"},
+      "urls": [],
+      "mentions": [],
+      "channels": []
+    },
+    {
+      "_id": "msg003",
+      "rid": "channel002",
+      "msg": "I'm having an issue with the login system. Can someone help?",
+      "ts": {"$date": "2023-01-20T14:30:00.000Z"},
+      "u": {
+        "_id": "user003",
+        "username": "jane.smith",
+        "name": "Jane Smith"
+      },
+      "_updatedAt": {"$date": "2023-01-20T14:30:00.000Z"},
+      "urls": [],
+      "mentions": [],
+      "channels": []
+    }
+  ]
+}

@@ -14,7 +14,20 @@
 # Requires: bash 4.0+, jq, grep, awk, sed
 #
 
-set -uo pipefail  # Remove -e to allow non-zero exit codes
+# Enhanced error handling and strict mode
+set -euo pipefail
+
+# Error handling function
+handle_error() {
+    local line_no=$1
+    local error_code=$2
+    echo "Error occurred in script at line $line_no: exit code $error_code" >&2
+    cleanup
+    exit "$error_code"
+}
+
+# Set error trap
+trap 'handle_error ${LINENO} $?' ERR
 
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -122,53 +135,123 @@ print_header() {
 
 # Function to check dependencies
 check_dependencies() {
-    local deps=("jq" "grep" "awk" "sed" "wc" "sort")
+    local deps=("jq" "grep" "awk" "sed" "wc" "sort" "date" "head" "tail" "cat")
     local missing=()
+    local version_issues=()
     
+    # Check for required commands
     for dep in "${deps[@]}"; do
         if ! command -v "$dep" &> /dev/null; then
             missing+=("$dep")
         fi
     done
     
+    # Check bash version (require 4.0+)
+    if [[ "${BASH_VERSION%%.*}" -lt 4 ]]; then
+        version_issues+=("bash version ${BASH_VERSION} (requires 4.0+)")
+    fi
+    
+    # Check jq version and functionality if available
+    if command -v jq &> /dev/null; then
+        if ! echo '{"test": "value"}' | jq -r '.test' &> /dev/null; then
+            version_issues+=("jq is not functioning properly")
+        fi
+    fi
+    
+    # Report missing dependencies
     if [[ ${#missing[@]} -gt 0 ]]; then
         log "ERROR" "Missing required dependencies: ${missing[*]}"
-        log "INFO" "Please install missing dependencies and try again"
+        echo -e "${RED}Installation instructions:${NC}" >&2
+        echo "  Ubuntu/Debian: sudo apt-get install ${missing[*]}" >&2
+        echo "  CentOS/RHEL: sudo yum install ${missing[*]}" >&2
+        echo "  macOS: brew install ${missing[*]}" >&2
+        echo "  Alpine: apk add ${missing[*]}" >&2
         exit 1
     fi
     
-    log "VERBOSE" "All dependencies satisfied"
+    # Report version issues
+    if [[ ${#version_issues[@]} -gt 0 ]]; then
+        log "ERROR" "Version compatibility issues: ${version_issues[*]}"
+        exit 1
+    fi
+    
+    log "VERBOSE" "All dependencies satisfied (bash ${BASH_VERSION}, jq $(jq --version 2>/dev/null || echo 'unknown'))"
 }
 
 # Function to validate arguments
 validate_args() {
+    # Check required dump path
     if [[ -z "${DUMP_PATH:-}" ]]; then
         log "ERROR" "DUMP_PATH is required"
         usage
         exit 1
     fi
     
+    # Validate dump path exists and is accessible
     if [[ ! -e "$DUMP_PATH" ]]; then
         log "ERROR" "Dump path does not exist: $DUMP_PATH"
         exit 1
     fi
     
+    # Check if path is readable
+    if [[ ! -r "$DUMP_PATH" ]]; then
+        log "ERROR" "Dump path is not readable: $DUMP_PATH"
+        log "INFO" "Check file permissions or run with appropriate privileges"
+        exit 1
+    fi
+    
+    # Validate dump path structure (directory or supported file)
+    if [[ -d "$DUMP_PATH" ]]; then
+        log "VERBOSE" "Processing directory: $DUMP_PATH"
+        # Check if directory contains any JSON files
+        if ! find "$DUMP_PATH" -name "*.json" -type f | head -1 | grep -q .; then
+            log "WARNING" "No JSON files found in directory: $DUMP_PATH"
+        fi
+    elif [[ -f "$DUMP_PATH" ]]; then
+        # Check if it's a supported file type
+        case "${DUMP_PATH,,}" in
+            *.json|*.tar|*.tar.gz|*.tgz|*.zip)
+                log "VERBOSE" "Processing file: $DUMP_PATH"
+                ;;
+            *)
+                log "WARNING" "Unsupported file type: $DUMP_PATH (expected .json, .tar, .tar.gz, .zip)"
+                ;;
+        esac
+    fi
+    
     # Validate output format
     case "$OUTPUT_FORMAT" in
         console|json|csv|html) ;;
-        *) log "ERROR" "Invalid output format: $OUTPUT_FORMAT"; exit 1 ;;
+        *) log "ERROR" "Invalid output format: $OUTPUT_FORMAT (supported: console, json, csv, html)"; exit 1 ;;
     esac
     
     # Validate severity
     case "$SEVERITY" in
         info|warning|error|critical) ;;
-        *) log "ERROR" "Invalid severity level: $SEVERITY"; exit 1 ;;
+        *) log "ERROR" "Invalid severity level: $SEVERITY (supported: info, warning, error, critical)"; exit 1 ;;
     esac
+    
+    # Validate export path if specified
+    if [[ -n "$EXPORT_PATH" ]]; then
+        local export_dir
+        export_dir="$(dirname "$EXPORT_PATH")"
+        if [[ ! -d "$export_dir" ]]; then
+            log "ERROR" "Export directory does not exist: $export_dir"
+            exit 1
+        fi
+        if [[ ! -w "$export_dir" ]]; then
+            log "ERROR" "Export directory is not writable: $export_dir"
+            exit 1
+        fi
+    fi
     
     # Check config file
     if [[ ! -f "$CONFIG_FILE" ]]; then
         log "WARNING" "Config file not found: $CONFIG_FILE"
         log "INFO" "Using default configuration"
+    elif [[ ! -r "$CONFIG_FILE" ]]; then
+        log "ERROR" "Config file is not readable: $CONFIG_FILE"
+        exit 1
     fi
 }
 
@@ -184,46 +267,117 @@ load_config() {
     fi
 }
 
-# Function to find dump files
+# Function to find dump files with enhanced error handling
 find_dump_files() {
     local dump_path="$1"
     declare -gA DUMP_FILES
+    local files_found=0
     
+    # Handle different input types
     if [[ -d "$dump_path" ]]; then
-        # Directory - look for standard dump files
-        DUMP_FILES[log]=$(find "$dump_path" -name "*log*.json" -type f | head -1)
-        DUMP_FILES[settings]=$(find "$dump_path" -name "*settings*.json" -type f | head -1)
-        DUMP_FILES[statistics]=$(find "$dump_path" -name "*statistics*.json" -type f | head -1)
-        DUMP_FILES[omnichannel]=$(find "$dump_path" -name "*omnichannel*.json" -type f | head -1)
-        DUMP_FILES[apps]=$(find "$dump_path" -name "*apps*.json" -type f | head -1)
-    else
-        # Single file - determine type by name
+        log "VERBOSE" "Scanning directory for dump files: $dump_path"
+        
+        # Use safer file finding with error checking
+        local log_files settings_files stats_files omni_files apps_files
+        
+        # Find files with error handling
+        log_files=$(find "$dump_path" -name "*log*.json" -type f 2>/dev/null | head -1 || true)
+        settings_files=$(find "$dump_path" -name "*settings*.json" -type f 2>/dev/null | head -1 || true)
+        stats_files=$(find "$dump_path" -name "*statistics*.json" -o -name "*stats*.json" -type f 2>/dev/null | head -1 || true)
+        omni_files=$(find "$dump_path" -name "*omnichannel*.json" -o -name "*omni*.json" -type f 2>/dev/null | head -1 || true)
+        apps_files=$(find "$dump_path" -name "*apps*.json" -o -name "*app*.json" -type f 2>/dev/null | head -1 || true)
+        
+        # Assign found files
+        [[ -n "$log_files" && -r "$log_files" ]] && DUMP_FILES[log]="$log_files" && ((files_found++))
+        [[ -n "$settings_files" && -r "$settings_files" ]] && DUMP_FILES[settings]="$settings_files" && ((files_found++))
+        [[ -n "$stats_files" && -r "$stats_files" ]] && DUMP_FILES[statistics]="$stats_files" && ((files_found++))
+        [[ -n "$omni_files" && -r "$omni_files" ]] && DUMP_FILES[omnichannel]="$omni_files" && ((files_found++))
+        [[ -n "$apps_files" && -r "$apps_files" ]] && DUMP_FILES[apps]="$apps_files" && ((files_found++))
+        
+    elif [[ -f "$dump_path" ]]; then
+        log "VERBOSE" "Processing single file: $dump_path"
+        
+        # Verify file is readable
+        if [[ ! -r "$dump_path" ]]; then
+            log "ERROR" "File is not readable: $dump_path"
+            return 1
+        fi
+        
+        # Verify file is valid JSON
+        if ! jq empty "$dump_path" &>/dev/null; then
+            log "WARNING" "File does not appear to be valid JSON: $dump_path"
+            # Continue anyway in case it's a compressed file or partial dump
+        fi
+        
+        # Determine file type by name and content
         local filename=$(basename "$dump_path")
-        case "$filename" in
-            *log*) DUMP_FILES[log]="$dump_path" ;;
-            *settings*) DUMP_FILES[settings]="$dump_path" ;;
-            *statistics*) DUMP_FILES[statistics]="$dump_path" ;;
-            *omnichannel*) DUMP_FILES[omnichannel]="$dump_path" ;;
-            *apps*) DUMP_FILES[apps]="$dump_path" ;;
-            *) DUMP_FILES[unknown]="$dump_path" ;;
+        case "${filename,,}" in
+            *log*) DUMP_FILES[log]="$dump_path" && ((files_found++)) ;;
+            *settings*|*config*) DUMP_FILES[settings]="$dump_path" && ((files_found++)) ;;
+            *statistics*|*stats*) DUMP_FILES[statistics]="$dump_path" && ((files_found++)) ;;
+            *omnichannel*|*omni*) DUMP_FILES[omnichannel]="$dump_path" && ((files_found++)) ;;
+            *apps*|*app*) DUMP_FILES[apps]="$dump_path" && ((files_found++)) ;;
+            *)
+                log "WARNING" "Unable to determine file type from name: $filename"
+                # Try to determine by content structure
+                if jq -e '.logs' "$dump_path" &>/dev/null; then
+                    DUMP_FILES[log]="$dump_path" && ((files_found++))
+                elif jq -e '.settings' "$dump_path" &>/dev/null; then
+                    DUMP_FILES[settings]="$dump_path" && ((files_found++))
+                elif jq -e '.totalUsers' "$dump_path" &>/dev/null; then
+                    DUMP_FILES[statistics]="$dump_path" && ((files_found++))
+                else
+                    DUMP_FILES[unknown]="$dump_path" && ((files_found++))
+                fi
+                ;;
         esac
+    else
+        log "ERROR" "Path is neither a file nor directory: $dump_path"
+        return 1
     fi
     
-    # Log found files
-    for type in log settings statistics omnichannel apps; do
+    # Report findings
+    if [[ $files_found -eq 0 ]]; then
+        log "WARNING" "No supported dump files found in: $dump_path"
+        log "INFO" "Supported file patterns: *log*.json, *settings*.json, *statistics*.json, *omnichannel*.json, *apps*.json"
+        return 1
+    fi
+    
+    # Log found files with validation
+    for type in log settings statistics omnichannel apps unknown; do
         if [[ -n "${DUMP_FILES[$type]:-}" ]]; then
-            log "VERBOSE" "Found $type file: ${DUMP_FILES[$type]}"
+            local file="${DUMP_FILES[$type]}"
+            local size=$(stat -c%s "$file" 2>/dev/null || echo "unknown")
+            log "VERBOSE" "Found $type file: $file (size: $size bytes)"
+            
+            # Additional validation for JSON files
+            if [[ "$file" == *.json ]] && ! jq empty "$file" &>/dev/null; then
+                log "WARNING" "JSON file may be corrupted or incomplete: $file"
+            fi
         fi
     done
+    
+    log "INFO" "Found $files_found dump file(s) for analysis"
+    return 0
 }
 
-# Function to analyze log files
+# Function to analyze log files with enhanced error handling
 analyze_logs() {
     local log_file="${DUMP_FILES[log]:-}"
     
-    if [[ -z "$log_file" || ! -f "$log_file" ]]; then
-        log "VERBOSE" "No log file found for analysis"
+    if [[ -z "$log_file" ]]; then
+        log "VERBOSE" "No log file specified for analysis"
         return 0
+    fi
+    
+    if [[ ! -f "$log_file" ]]; then
+        log "WARNING" "Log file does not exist: $log_file"
+        return 0
+    fi
+    
+    if [[ ! -r "$log_file" ]]; then
+        log "ERROR" "Log file is not readable: $log_file"
+        return 1
     fi
     
     log "INFO" "Analyzing logs: $(basename "$log_file")"
@@ -234,26 +388,41 @@ analyze_logs() {
     local info_count=0
     local issues_found=0
     
-    # Check if file is valid JSON
+    # Check if file is valid JSON with proper error handling
     if ! jq empty "$log_file" 2>/dev/null; then
         log "ERROR" "Invalid JSON in log file: $log_file"
+        local file_size=$(stat -c%s "$log_file" 2>/dev/null || echo "unknown")
+        log "INFO" "File size: $file_size bytes. File may be truncated or corrupted."
         return 1
     fi
     
-    # Count total entries (ensure clean numeric value)
-    if jq -e '.queue' "$log_file" >/dev/null 2>&1; then
+    # Check file size to prevent memory issues
+    local file_size_bytes=$(stat -c%s "$log_file" 2>/dev/null || echo 0)
+    if [[ $file_size_bytes -gt 104857600 ]]; then  # 100MB
+        log "WARNING" "Large log file detected ($(($file_size_bytes / 1024 / 1024))MB). Processing may be slow."
+    fi
+    
+    # Count total entries with error handling
+    local total_entries_result
+    if total_entries_result=$(jq -e '.queue | length' "$log_file" 2>/dev/null); then
         # RocketChat support dump format with queue array
-        total_entries=$(jq '.queue | length' "$log_file" 2>/dev/null | tr -d ' \n' || echo 1)
-    elif jq -e 'type == "array"' "$log_file" >/dev/null 2>&1; then
+        total_entries="$total_entries_result"
+    elif total_entries_result=$(jq -e 'length' "$log_file" 2>/dev/null) && jq -e 'type == "array"' "$log_file" >/dev/null 2>&1; then
         # Direct array format
-        total_entries=$(jq 'length' "$log_file" 2>/dev/null | tr -d ' \n' || echo 1)
-    else
+        total_entries="$total_entries_result"
+    elif jq -e 'type == "object"' "$log_file" >/dev/null 2>&1; then
         # Single object format
+        total_entries=1
+    else
+        log "WARNING" "Unable to determine log structure, assuming single entry"
         total_entries=1
     fi
     
-    # Ensure it's numeric
-    total_entries=${total_entries:-1}
+    # Ensure total_entries is numeric and positive
+    if ! [[ "$total_entries" =~ ^[0-9]+$ ]] || [[ $total_entries -eq 0 ]]; then
+        log "WARNING" "Invalid entry count detected, defaulting to 1"
+        total_entries=1
+    fi
     
     # Analyze log entries for patterns
     local error_patterns="error|exception|failed|timeout|connection refused|cannot connect"
@@ -268,7 +437,11 @@ analyze_logs() {
     fi
     
     # Extract and analyze messages
-    local messages_file=$(mktemp)
+    local messages_file
+    messages_file=$(create_temp_file "messages") || {
+        log "ERROR" "Failed to create temporary file for message analysis"
+        return 1
+    }
     
     if jq -e '.queue' "$log_file" >/dev/null 2>&1; then
         # RocketChat support dump format - extract from queue.string fields
@@ -1776,11 +1949,14 @@ EOF
                             <span class="stat-label">Uptime:</span>
                             <span class="stat-value">$(
                                 local uptime=${ANALYSIS_RESULTS[stats_uptime]:-0}
-                                # Force decimal interpretation
-                                uptime=$((10#$uptime))
-                                local days=$((uptime / 86400))
-                                local hours=$(((uptime % 86400) / 3600))
-                                echo "${days}d ${hours}h"
+                                # Safely handle uptime calculation
+                                if [[ "$uptime" =~ ^[0-9]+$ ]]; then
+                                    local days=$((uptime / 86400))
+                                    local hours=$(((uptime % 86400) / 3600))
+                                    echo "${days}d ${hours}h"
+                                else
+                                    echo "N/A"
+                                fi
                             )</span>
                         </div>
                     </div>
@@ -1972,9 +2148,85 @@ EOF
 EOF
 }
 
-# Function to cleanup temporary files
+# Function to cleanup temporary files with enhanced safety
 cleanup() {
-    rm -f "${SCRIPT_DIR}/.tmp_"* 2>/dev/null || true
+    local exit_code=${1:-0}
+    
+    # Clean up temporary files created by this script
+    local temp_files=(
+        "${SCRIPT_DIR}/.tmp_"*
+        "/tmp/rocketchat_analysis_"*
+        "${TMPDIR:-/tmp}/rocketchat_analysis_"*
+    )
+    
+    for pattern in "${temp_files[@]}"; do
+        if compgen -G "$pattern" >/dev/null 2>&1; then
+            rm -f $pattern 2>/dev/null || true
+        fi
+    done
+    
+    # Clean up any remaining process-specific temp files
+    if [[ -n "${TEMP_DIR:-}" && -d "$TEMP_DIR" ]]; then
+        rm -rf "$TEMP_DIR" 2>/dev/null || true
+    fi
+    
+    log "VERBOSE" "Cleanup completed"
+    
+    # If called with an exit code, exit with that code
+    if [[ $exit_code -ne 0 ]]; then
+        exit $exit_code
+    fi
+}
+
+# Function to safely create temporary files
+create_temp_file() {
+    local suffix="${1:-tmp}"
+    local temp_file
+    
+    # Try to use mktemp with a secure template
+    if command -v mktemp >/dev/null 2>&1; then
+        temp_file=$(mktemp "${TMPDIR:-/tmp}/rocketchat_analysis_XXXXXX.${suffix}" 2>/dev/null) || {
+            # Fallback if mktemp fails
+            temp_file="${TMPDIR:-/tmp}/rocketchat_analysis_$$_${RANDOM}.${suffix}"
+            touch "$temp_file" 2>/dev/null || {
+                log "ERROR" "Unable to create temporary file"
+                return 1
+            }
+        }
+    else
+        # Fallback for systems without mktemp
+        temp_file="${TMPDIR:-/tmp}/rocketchat_analysis_$$_${RANDOM}.${suffix}"
+        touch "$temp_file" 2>/dev/null || {
+            log "ERROR" "Unable to create temporary file"
+            return 1
+        }
+    fi
+    
+    # Ensure the file is readable and writable by owner only
+    chmod 600 "$temp_file" 2>/dev/null || true
+    
+    echo "$temp_file"
+}
+
+# Function to safely write to temporary analysis files
+write_temp_analysis() {
+    local file_type="$1"
+    local content="$2"
+    local temp_file="${SCRIPT_DIR}/.tmp_${file_type}"
+    
+    # Ensure directory is writable
+    if [[ ! -w "$SCRIPT_DIR" ]]; then
+        log "WARNING" "Script directory is not writable: $SCRIPT_DIR"
+        return 1
+    fi
+    
+    # Write content safely
+    if ! echo "$content" > "$temp_file" 2>/dev/null; then
+        log "WARNING" "Failed to write temporary analysis file: $temp_file"
+        return 1
+    fi
+    
+    return 0
 }
 
 # Function to generate and output report

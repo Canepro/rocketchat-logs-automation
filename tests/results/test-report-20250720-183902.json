@@ -1,0 +1,138 @@
+{
+  "TestSummary": {
+    "TestsPassed": 5,
+    "Generated": "2025-07-20 18:39:02",
+    "TestsFailed": 1,
+    "SuccessRate": 83.33,
+    "TestsRun": 6,
+    "Platform": {
+      "PSVersion": "7.5.1",
+      "OSVersion": "Microsoft Windows NT 10.0.26100.0",
+      "Architecture": 8,
+      "Is64Bit": true,
+      "PSEdition": "Core",
+      "OS": 2
+    }
+  },
+  "Results": [
+    {
+      "Message": "Checking test prerequisites...",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "Platform: Win32NT - Microsoft Windows NT 10.0.26100.0",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "PowerShell: 7.5.1 (Core)",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "JSON processing capabilities verified",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "Prerequisites check completed",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "Setting up test environment...",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "Test environment setup completed",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "Running unit tests...",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "Running test: config_loading",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "config_loading",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "PASS"
+    },
+    {
+      "Message": "Running test: fixture_creation",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "fixture_creation - Test fixtures not properly created",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "FAIL"
+    },
+    {
+      "Message": "Running test: project_structure",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "project_structure",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "PASS"
+    },
+    {
+      "Message": "Running PowerShell script tests...",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "Running test: powershell_syntax_check",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "powershell_syntax_check",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "PASS"
+    },
+    {
+      "Message": "Running test: powershell_help_check",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "powershell_help_check",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "PASS"
+    },
+    {
+      "Message": "Running test: powershell_parameter_validation",
+      "Timestamp": "2025-07-20 18:38:55",
+      "Level": "INFO"
+    },
+    {
+      "Message": "powershell_parameter_validation",
+      "Timestamp": "2025-07-20 18:39:02",
+      "Level": "PASS"
+    },
+    {
+      "Message": "Generating test report...",
+      "Timestamp": "2025-07-20 18:39:02",
+      "Level": "INFO"
+    }
+  ],
+  "Configuration": {
+    "IntegrationTests": false,
+    "PowerShellTesting": true,
+    "VerboseMode": {
+      "IsPresent": false
+    },
+    "BashTesting": false,
+    "UnitTests": true
+  }
+}

@@ -4,15 +4,28 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 
 ## 🚀 Features
 
+### 📊 **Professional HTML Reports (NEW!)**
+- **Modern responsive design** with gradient backgrounds and professional styling
+- **Interactive collapsible sections** for detailed exploration
+- **Executive summary** with immediate health assessment and recommendations
+- **Visual health indicators** with color-coded status badges (🟢🟡🔴)
+- **Mobile-friendly** responsive layout for viewing on any device
+
+### 🏥 **Advanced Health Scoring System**
+- **Overall system health percentage** with visual status indicators
+- **Component-specific scoring** for Logs, Settings, Performance, and Security
+- **Issue impact weighting** (Critical: -25pts, Error: -10pts, Warning: -5pts, Info: -1pt)
+- **Automated recommendations** based on health score and identified issues
+- **Trend analysis** and performance insights
+
+### 🔍 **Comprehensive Analysis**
 - **Dual Implementation**: Both PowerShell and Bash versions with identical functionality
-- **Comprehensive Analysis**: Analyzes logs, settings, statistics, Omnichannel configuration, and installed apps
-- **Multiple Output Formats**: Console, JSON, CSV, and HTML reports
+- **Multiple Data Sources**: Analyzes logs, settings, statistics, Omnichannel configuration, and installed apps
+- **Multiple Output Formats**: Console, JSON, CSV, and professional HTML reports
 - **Pattern Recognition**: Automatically detects error patterns and trends
-- **Health Scoring**: Provides overall system health scores and component-specific metrics
 - **Security Analysis**: Reviews security settings and identifies potential vulnerabilities
 - **Performance Insights**: Analyzes memory usage, user load, and system performance
 - **Configurable Rules**: Customizable analysis rules and thresholds
-- **Professional Reports**: Generate presentation-ready HTML reports
 - **Cross-Platform**: Works on Windows, macOS, and Linux
 
 ## 📋 Requirements
@@ -69,7 +82,7 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 .\Analyze-RocketChatDump.ps1 -DumpPath "C:\Downloads\7.8.0-support-dump"
 ```
 
-#### Generate HTML Report
+#### Generate Professional HTML Report
 ```powershell
 .\Analyze-RocketChatDump.ps1 -DumpPath "C:\Downloads\7.8.0-support-dump" -OutputFormat HTML -ExportPath "report.html"
 ```
@@ -84,6 +97,15 @@ Start-Process "chrome.exe" "report.html"
 Start-Process "msedge.exe" "report.html"
 Start-Process "firefox.exe" "report.html"
 ```
+
+The HTML report features:
+- 🎨 **Modern gradient design** with professional styling
+- 📊 **Interactive health dashboard** with visual indicators
+- 🔧 **Collapsible sections** for detailed exploration
+- 📱 **Responsive design** for mobile and desktop viewing
+- 🎯 **Executive summary** for quick decision making
+- 📈 **Component health scoring** with color-coded status
+- 💡 **Actionable recommendations** with prioritized next steps
 
 #### Filter by Severity
 ```powershell
@@ -130,6 +152,100 @@ wsl bash ./analyze-rocketchat-dump.sh /mnt/c/Downloads/7.8.0-support-dump
 
 REM For paths with spaces, use quotes
 wsl bash ./analyze-rocketchat-dump.sh "/mnt/c/Users/i/Downloads/7.8.0-support-dump _1_"
+```
+
+## 📊 HTML Reports & Health Scoring
+
+### 🎨 Professional HTML Reports
+
+The tool generates **production-ready HTML reports** with modern design and interactive features:
+
+#### Visual Features
+- **Modern gradient design** with professional blue theme
+- **Responsive layout** that adapts to mobile, tablet, and desktop screens
+- **Interactive hover effects** and smooth CSS animations
+- **Glass-morphism styling** with backdrop blur effects
+- **Professional typography** using Segoe UI font family
+
+#### Health Dashboard
+- **Executive summary** with immediate system health assessment
+- **Visual health indicators** using color-coded badges:
+  - 🟢 **EXCELLENT** (90-100%): System performing optimally
+  - 🟡 **GOOD** (70-89%): Minor improvements recommended
+  - 🔴 **CRITICAL** (<70%): Immediate attention required
+
+#### Interactive Elements
+- **Collapsible sections** - Click section headers to expand/collapse content
+- **Detailed issue cards** with severity icons and timestamps
+- **Component health breakdown** with individual scoring
+- **Actionable recommendations** with prioritized next steps
+
+### 🏥 Health Scoring Algorithm
+
+The health scoring system provides comprehensive assessment across multiple components:
+
+#### Scoring Methodology
+```
+Base Score: 100%
+- Critical Issues: -25 points each
+- Error Issues: -10 points each  
+- Warning Issues: -5 points each
+- Info Issues: -1 point each
+Minimum Score: 0%
+```
+
+#### Component Scores
+- **Logs**: Based on error frequency and patterns
+- **Settings**: Configuration compliance and best practices
+- **Performance**: Memory usage, CPU load, and response times
+- **Security**: Authentication, access controls, and vulnerabilities
+
+#### Example Health Report
+```
+📊 HEALTH OVERVIEW
+Overall Health Score: 75%
+Issues Summary:
+  • Critical: 0
+  • Error: 2
+  • Warning: 1
+  • Info: 0
+
+Component Health:
+  • Security: 100% 🟢
+  • Performance: 100% 🟢
+  • Settings: 100% 🟢
+  • Logs: 85% 🟡
+```
+
+### 💡 Automated Recommendations
+
+Based on the health score and identified issues, the system provides:
+
+- **Priority actions** for immediate attention
+- **Next steps** with time-bound recommendations
+- **Security improvements** when issues are detected
+- **Performance optimization** suggestions
+- **Maintenance recommendations** for long-term health
+
+### 📱 Cross-Platform Viewing
+
+HTML reports work seamlessly across platforms:
+
+```powershell
+# Windows
+Start-Process "report.html"                    # Default browser
+Start-Process "msedge.exe" "report.html"      # Microsoft Edge
+Start-Process "chrome.exe" "report.html"      # Google Chrome
+
+# macOS
+open report.html                               # Default browser
+open -a "Google Chrome" report.html           # Chrome
+open -a Safari report.html                    # Safari
+
+# Linux
+xdg-open report.html                          # Default browser
+firefox report.html                           # Firefox
+google-chrome report.html                     # Chrome
 ```
 
 ## 🧪 Testing the Installation
