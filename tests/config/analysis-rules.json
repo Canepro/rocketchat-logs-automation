@@ -1,0 +1,22 @@
+{
+  "analysis": {
+    "rules": {
+      "detectSuspiciousActivity": true,
+      "flagLargeMessages": true,
+      "trackUserActivity": true,
+      "maxMessageLength": 10000,
+      "suspiciousKeywords": ["password", "secret", "confidential"]
+    },
+    "output": {
+      "includeUserStats": true,
+      "includeChannelStats": true,
+      "includeMessageStats": true,
+      "includeTimeline": true
+    }
+  },
+  "processing": {
+    "batchSize": 1000,
+    "maxMemoryUsage": "1GB",
+    "enableParallelProcessing": true
+  }
+}
