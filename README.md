@@ -10,6 +10,8 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 ### 📊 **Professional HTML Reports**
 - **Modern responsive design** with gradient backgrounds and professional styling
 - **Interactive collapsible sections** for detailed exploration
+- **Interactive Log Analysis v1.4.0** with expandable log entries and real-time filtering
+- **JavaScript-powered severity filtering** (Critical, Error, Warning, Info)
 - **Executive summary** with immediate health assessment and recommendations
 - **Visual health indicators** with color-coded status badges (🟢🟡🔴)
 - **Mobile-friendly** responsive layout for viewing on any device
@@ -22,7 +24,7 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 - **Trend analysis** and performance insights
 
 ### 🔍 **Comprehensive Analysis**
-- **Dual Implementation**: Both PowerShell and Bash versions with identical functionality
+- **Dual Implementation**: Both PowerShell and Bash versions (*Interactive Log Analysis v1.4.0 currently PowerShell-only*)
 - **Multiple Data Sources**: Analyzes logs, settings, statistics, Omnichannel configuration, and installed apps
 - **Multiple Output Formats**: Console, JSON, CSV, and professional HTML reports
 - **Pattern Recognition**: Automatically detects error patterns and trends
@@ -182,6 +184,16 @@ The tool generates **production-ready HTML reports** with modern design and inte
 - **Detailed issue cards** with severity icons and timestamps
 - **Component health breakdown** with individual scoring
 - **Actionable recommendations** with prioritized next steps
+
+#### 🆕 Interactive Log Analysis v1.4.0 (PowerShell)
+- **Expandable log entries** - Click to view full log details with context
+- **JavaScript-powered severity filtering** - Filter by Critical, Error, Warning, Info
+- **Real-time count updates** - Dynamic counters that update as you filter
+- **Consistent display logic** - Accurate counts between summary and detailed views
+- **Cross-version compatibility** - Works with RocketChat 7.2.0, 7.6.1, 7.8.0+
+- **Smart fallback** - Shows sample entries when no real errors are found
+
+> **Note**: Interactive Log Analysis v1.4.0 is currently available in the PowerShell version only. Bash version update coming soon.
 
 ### 🏥 Health Scoring Algorithm
 
@@ -422,9 +434,10 @@ Rocketchat_Logs_Automation/
 ## 📈 Analysis Components
 
 ### 1. Log Analysis
-- Error and warning detection
+- Error and warning detection with interactive filtering
+- **Interactive Log Analysis v1.4.0** (PowerShell): Expandable log entries with JavaScript-powered severity filtering
 - Pattern recognition and frequency analysis
-- Timeline analysis
+- Timeline analysis with real-time count updates
 - Performance issue identification
 
 ### 2. Settings Analysis
