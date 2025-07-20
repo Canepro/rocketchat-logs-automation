@@ -829,6 +829,102 @@ $(foreach ($issue in ($Results.LogAnalysis.Issues | Select-Object -First 20)) {
 "@
     }
 
+    # Add Apps & Integrations section - Issue #15 Implementation
+    if ($Results.AppsAnalysis) {
+        $appsData = $Results.AppsAnalysis
+        $totalApps = $appsData.InstalledApps.Count
+        $enabledApps = ($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Value.Status -like "*enabled*" -or $_.Value.Status -eq "initialized" }).Count
+        $disabledApps = ($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Value.Status -like "*disabled*" -or $_.Value.Status -like "*invalid*" }).Count
+        $appIssues = if ($appsData.Issues) { $appsData.Issues.Count } else { 0 }
+
+        $html += @"
+        <div class="section">
+            <h2 onclick="toggleSection(this)">🧩 Apps & Integrations ▼</h2>
+            <div class="section-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>📊 App Overview</h4>
+                        <p><strong>Total Apps:</strong> <span style="font-weight: bold; font-size: 1.2em; color: #007acc;">$totalApps</span></p>
+                        <p><strong>Enabled/Active:</strong> <span style="color: #28a745; font-weight: bold;">$enabledApps</span></p>
+                        <p><strong>Disabled/Issues:</strong> <span style="color: #dc3545; font-weight: bold;">$disabledApps</span></p>
+                        <p><strong>Issues Found:</strong> <span style="color: #ffc107; font-weight: bold;">$appIssues</span></p>
+                    </div>
+$(if ($appsData.SecurityApps.Count -gt 0 -or $appsData.PerformanceApps.Count -gt 0) {
+"                    <div class='stat-card'>
+                        <h4>🔍 Special Categories</h4>
+                        $(if ($appsData.SecurityApps.Count -gt 0) { "<p><strong>🔒 Security Apps:</strong> $($appsData.SecurityApps.Count)</p>" })
+                        $(if ($appsData.PerformanceApps.Count -gt 0) { "<p><strong>📈 Performance Apps:</strong> $($appsData.PerformanceApps.Count)</p>" })
+                        <p><strong>🔧 Integration Apps:</strong> $(($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Key -like "*jitsi*" -or $_.Key -like "*webhook*" -or $_.Key -like "*api*" }).Count)</p>
+                    </div>"
+})
+                </div>
+
+$(if ($totalApps -gt 0) {
+"                <h3>📱 Installed Applications</h3>
+                <div style='background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 15px 0;'>
+$(foreach ($app in ($appsData.InstalledApps.GetEnumerator() | Sort-Object Name)) {
+    $appName = $app.Key
+    $appInfo = $app.Value
+    $statusIcon = switch -Wildcard ($appInfo.Status) {
+        "*enabled*" { "🟢" }
+        "initialized" { "🟡" }
+        "*disabled*" { "🔴" }
+        "*invalid*" { "❌" }
+        default { "⚪" }
+    }
+    $statusColor = switch -Wildcard ($appInfo.Status) {
+        "*enabled*" { "#28a745" }
+        "initialized" { "#ffc107" }
+        "*disabled*" { "#dc3545" }
+        "*invalid*" { "#dc3545" }
+        default { "#6c757d" }
+    }
+    $authorInfo = if ($appInfo.Author -is [string]) { $appInfo.Author } else { $appInfo.Author.name }
+    $version = if ($appInfo.Version) { $appInfo.Version } else { "Unknown" }
+    
+    "                    <div style='border: 1px solid #dee2e6; border-radius: 6px; padding: 15px; margin: 10px 0; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+                        <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;'>
+                            <h4 style='margin: 0; color: #2c3e50; font-size: 1.1em;'>$statusIcon $appName</h4>
+                            <span style='background: $statusColor; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold;'>$($appInfo.Status.ToUpper())</span>
+                        </div>
+                        <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 0.9em; color: #555;'>
+                            <div><strong>Version:</strong> $version</div>
+                            $(if ($authorInfo) { "<div><strong>Author:</strong> $authorInfo</div>" })
+                        </div>
+                        $(if ($appInfo.Description) { "<p style='margin: 8px 0 0 0; color: #6c757d; font-style: italic;'>$($appInfo.Description)</p>" })
+                    </div>"
+})
+                </div>"
+})
+
+$(if ($appIssues -gt 0) {
+"                <h3>⚠️ App Issues & Recommendations</h3>
+                <ul class='issue-list'>
+$(foreach ($issue in $appsData.Issues) {
+    $cssClass = "issue-" + $issue.Severity.ToLower()
+    $icon = switch ($issue.Severity) {
+        "Critical" { "🚨" }
+        "Error" { "❌" }
+        "Warning" { "⚠️" }
+        default { "ℹ️" }
+    }
+    "                <li class='issue-item $cssClass'>
+                    <div style='display: flex; align-items: center; gap: 10px;'>
+                        <span style='font-size: 1.2em;'>$icon</span>
+                        <div>
+                            <strong>[$($issue.Severity)]</strong> $($issue.Message)
+                            $(if ($issue.App) { "<br><small style='color: #6c757d;'>📱 App: $($issue.App)</small>" })
+                        </div>
+                    </div>
+                </li>"
+})
+                </ul>"
+})
+            </div>
+        </div>
+"@
+    }
+
     # Add security analysis section
     if ($securityAnalysis -and $securityAnalysis.SecurityScore) {
         $html += @"
