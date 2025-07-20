@@ -215,14 +215,14 @@ function Get-SecurityAnalysis {
         Settings analysis results
     
     .PARAMETER Issues
-        All identified issues
+        All identified issues (can be empty array)
     #>
     param(
         [Parameter(Mandatory = $true)]
         [object]$Settings,
         
-        [Parameter(Mandatory = $true)]
-        [array]$Issues
+        [Parameter(Mandatory = $false)]
+        [array]$Issues = @()
     )
     
     $security = @{
@@ -233,15 +233,16 @@ function Get-SecurityAnalysis {
     }
     
     # Analyze security settings
-    foreach ($setting in $Settings.SecuritySettings.GetEnumerator()) {
-        $key = $setting.Key
-        $value = $setting.Value
-        
-        $security.ConfigurationReview[$key] = @{
-            Value = $value
-            Risk = "Low"
-            Description = ""
-        }
+    if ($Settings -and $Settings.SecuritySettings) {
+        foreach ($setting in $Settings.SecuritySettings.GetEnumerator()) {
+            $key = $setting.Key
+            $value = $setting.Value
+            
+            $security.ConfigurationReview[$key] = @{
+                Value = $value
+                Risk = "Low"
+                Description = ""
+            }
         
         # Check for common security misconfigurations
         switch -Regex ($key) {
@@ -277,6 +278,7 @@ function Get-SecurityAnalysis {
                 }
             }
         }
+    }
     }
     
     # Analyze security-related issues
