@@ -1131,7 +1131,6 @@ $(foreach ($issue in ($displayEntries | Select-Object -First 50)) {
     }
     
     # Generate additional log context (simulated for demo)
-    $logLevel = $issue.Severity.ToUpper()
     $component = if ($issue.Context) { $issue.Context } else { "System" }
     $category = if ($issue.Type) { $issue.Type } else { "General" }
     $threadId = "T" + (Get-Random -Minimum 1000 -Maximum 9999)
@@ -1240,12 +1239,19 @@ $(foreach ($issue in ($displayEntries | Select-Object -First 50)) {
                         <p><strong>Disabled/Issues:</strong> <span style="color: #dc3545; font-weight: bold;">$disabledApps</span></p>
                         <p><strong>Issues Found:</strong> <span style="color: #ffc107; font-weight: bold;">$appIssues</span></p>
                     </div>
-$(if ($appsData.SecurityApps.Count -gt 0 -or $appsData.PerformanceApps.Count -gt 0) {
+$(if ($appsData.SecurityApps -and $appsData.SecurityApps.Count -gt 0) {
 "                    <div class='stat-card'>
                         <h4>🔍 Special Categories</h4>
-                        $(if ($appsData.SecurityApps.Count -gt 0) { "<p><strong>🔒 Security Apps:</strong> $($appsData.SecurityApps.Count)</p>" })
-                        $(if ($appsData.PerformanceApps.Count -gt 0) { "<p><strong>📈 Performance Apps:</strong> $($appsData.PerformanceApps.Count)</p>" })
+                        <p><strong>🔒 Security Apps:</strong> $($appsData.SecurityApps.Count)</p>
+                        $(if ($appsData.PerformanceApps -and $appsData.PerformanceApps.Count -gt 0) { "<p><strong>📈 Performance Apps:</strong> $($appsData.PerformanceApps.Count)</p>" })
                         <p><strong>🔧 Integration Apps:</strong> $(($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Key -like "*jitsi*" -or $_.Key -like "*webhook*" -or $_.Key -like "*api*" }).Count)</p>
+                    </div>"
+} else {
+"                    <div class='stat-card'>
+                        <h4>🔍 App Categories</h4>
+                        <p><strong>🔧 Integration Apps:</strong> $(($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Key -like "*jitsi*" -or $_.Key -like "*webhook*" -or $_.Key -like "*api*" }).Count)</p>
+                        <p><strong>💬 Communication:</strong> $(($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Key -like "*chat*" -or $_.Key -like "*message*" }).Count)</p>
+                        <p><strong>🛠️ Utility Apps:</strong> $(($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Key -like "*tool*" -or $_.Key -like "*util*" }).Count)</p>
                     </div>"
 })
                 </div>
@@ -1257,11 +1263,11 @@ $(foreach ($app in ($appsData.InstalledApps.GetEnumerator() | Sort-Object Name))
     $appName = $app.Key
     $appInfo = $app.Value
     $statusIcon = switch -Wildcard ($appInfo.Status) {
-        "*enabled*" { "[ON]" }
-        "initialized" { "[INIT]" }
-        "*disabled*" { "[OFF]" }
-        "*invalid*" { "[ERR]" }
-        default { "[UNK]" }
+        "*enabled*" { "✅" }
+        "initialized" { "🔄" }
+        "*disabled*" { "❌" }
+        "*invalid*" { "⚠️" }
+        default { "❔" }
     }
     $statusColor = switch -Wildcard ($appInfo.Status) {
         "*enabled*" { "#28a745" }
@@ -1270,8 +1276,9 @@ $(foreach ($app in ($appsData.InstalledApps.GetEnumerator() | Sort-Object Name))
         "*invalid*" { "#dc3545" }
         default { "#6c757d" }
     }
-    $authorInfo = if ($appInfo.Author -is [string]) { $appInfo.Author } else { $appInfo.Author.name }
+    $authorInfo = if ($appInfo.Author -is [string]) { $appInfo.Author } else { if ($appInfo.Author.name) { $appInfo.Author.name } else { "Unknown" } }
     $version = if ($appInfo.Version) { $appInfo.Version } else { "Unknown" }
+    $description = if ($appInfo.Description) { $appInfo.Description } else { "No description available" }
     
     "                    <div style='border: 1px solid #dee2e6; border-radius: 6px; padding: 15px; margin: 10px 0; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
                         <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;'>
@@ -1280,11 +1287,16 @@ $(foreach ($app in ($appsData.InstalledApps.GetEnumerator() | Sort-Object Name))
                         </div>
                         <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 0.9em; color: #555;'>
                             <div><strong>Version:</strong> $version</div>
-                            $(if ($authorInfo) { "<div><strong>Author:</strong> $authorInfo</div>" })
+                            <div><strong>Author:</strong> $authorInfo</div>
                         </div>
-                        $(if ($appInfo.Description) { "<p style='margin: 8px 0 0 0; color: #6c757d; font-style: italic;'>$($appInfo.Description)</p>" })
+                        <p style='margin: 8px 0 0 0; color: #6c757d; font-style: italic;'>$description</p>
                     </div>"
 })
+                </div>"
+} else {
+"                <div style='background: #e7f3ff; border: 1px solid #007acc; border-radius: 8px; padding: 20px; margin: 15px 0; text-align: center;'>
+                    <h4 style='margin: 0 0 10px 0; color: #004085;'>📱 No Apps Detected</h4>
+                    <p style='margin: 0; color: #004085;'>No RocketChat apps were found in the analysis data. This may be normal for basic installations.</p>
                 </div>"
 })
 
@@ -1299,17 +1311,22 @@ $(foreach ($issue in $appsData.Issues) {
         "Warning" { "⚠️" }
         default { "ℹ️" }
     }
-    "                <li class='issue-item $cssClass'>
-                    <div style='display: flex; align-items: center; gap: 10px;'>
-                        <span style='font-size: 1.2em;'>$icon</span>
-                        <div>
-                            <strong>[$($issue.Severity)]</strong> $($issue.Message)
-                            $(if ($issue.App) { "<br><small style='color: #6c757d;'>📱 App: $($issue.App)</small>" })
+    "                    <li class='issue-item $cssClass'>
+                        <div style='display: flex; align-items: center; gap: 10px;'>
+                            <span style='font-size: 1.2em;'>$icon</span>
+                            <div>
+                                <strong>[$($issue.Severity)]</strong> $($issue.Message)
+                                $(if ($issue.App) { "<br><small style='color: #6c757d;'>📱 App: $($issue.App)</small>" })
+                            </div>
                         </div>
-                    </div>
-                </li>"
+                    </li>"
 })
                 </ul>"
+} else {
+"                <div style='background: #d4edda; border: 1px solid #28a745; border-radius: 8px; padding: 15px; margin: 15px 0;'>
+                    <h4 style='margin: 0 0 8px 0; color: #155724;'>✅ No App Issues Detected</h4>
+                    <p style='margin: 0; color: #155724;'>All installed apps appear to be functioning correctly with no critical issues found.</p>
+                </div>"
 })
             </div>
         </div>
@@ -1627,7 +1644,7 @@ $(foreach ($issue in $appsData.Issues) {
 
     return $html
 }
-
+}
 Export-ModuleMember -Function Write-ConsoleReport, New-JSONReport, New-CSVReport, New-HTMLReport
 
 
