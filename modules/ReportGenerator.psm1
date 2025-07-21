@@ -1346,9 +1346,12 @@ $(foreach ($issue in $appsData.Issues) {
                 </div>
             </div>
         </div>
+"@
+
+    # Add Configuration Settings Section
+    $html += @"
 
         <!-- Start Configuration Settings Section -->
-        $html += @"
         <div class="section collapsible expanded">
             <h2 onclick="toggleSection(this)">⚙️ Configuration Settings ▼</h2>
             <div class="section-content">
@@ -1704,3 +1707,4 @@ $(foreach ($issue in $settingsData.Issues) {
 }
 
 Export-ModuleMember -Function Write-ConsoleReport, New-JSONReport, New-CSVReport, New-HTMLReport
+
