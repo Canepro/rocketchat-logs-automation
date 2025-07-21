@@ -6,8 +6,12 @@ echo ================================================================
 echo.
 echo This will analyze your RocketChat support dump and create an HTML report.
 echo.
+echo 💡 First time? Try our sample data:
+echo    - test-dump\standard-dump.json (comprehensive example)
+echo    - test-dump\minimal-dump.json (basic example)
+echo.
 
-set /p dumppath="📂 Enter the full path to your RocketChat dump folder: "
+set /p dumppath="📂 Enter path to your dump file or folder: "
 
 if "%dumppath%"=="" (
     echo ❌ No path provided. Please try again.

@@ -34,7 +34,16 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 ./test.sh
 ```
 
-**Analyze your dump:**
+**Try with sample data first:**
+```powershell
+# Windows PowerShell
+.\analyze.ps1 -DumpPath "test-dump\standard-dump.json" -OutputFormat HTML
+
+# Linux/macOS Bash
+./analyze.sh --format html test-dump/standard-dump.json
+```
+
+**Analyze your own dump:**
 ```powershell
 # Windows PowerShell
 .\analyze.ps1 -DumpPath "C:\path\to\dump" -OutputFormat HTML
@@ -106,7 +115,12 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 │   └── report-templates/              # Report templates
 │
 └── 📂 test-dump/                   # Sample test data
-    └── (RocketChat support dump samples)
+    ├── README.md                       # Guide to sample files
+    ├── standard-dump.json              # Complete sample (users, channels, messages)
+    ├── minimal-dump.json               # Basic sample structure
+    ├── 7.8.0-statistics.json          # Legacy format samples
+    ├── 7.8.0-settings.json            # 
+    └── 7.8.0-server.log               # 
 ```
 
 ## 📚 Documentation
@@ -134,7 +148,10 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 
 ### Basic Analysis
 ```powershell
-# Generate HTML report (using new entry points)
+# Test with sample data first (recommended for beginners)
+.\analyze.ps1 -DumpPath "test-dump\standard-dump.json" -OutputFormat HTML
+
+# Generate HTML report from real dump  
 .\analyze.ps1 -DumpPath "C:\dump" -OutputFormat HTML
 
 # Console output with warnings only  

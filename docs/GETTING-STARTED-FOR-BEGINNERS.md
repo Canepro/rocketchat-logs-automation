@@ -98,7 +98,12 @@ cd rocketchat-logs-automation
 ## 📂 Step 3: Get Test Data
 
 ### Option A: Use Our Test Data
-We include sample data in the `test-dump/` folder - you can start with this!
+We include comprehensive sample data in the `test-dump/` folder:
+- **`standard-dump.json`** - Complete example with users, channels, and messages (recommended for beginners)
+- **`minimal-dump.json`** - Basic structure example
+- **Legacy format files** - For older RocketChat versions
+
+See `test-dump/README.md` for detailed descriptions of each file.
 
 ### Option B: Get Real RocketChat Support Dump
 1. **From RocketChat Admin Panel:**
@@ -167,13 +172,27 @@ chmod +x scripts/*.sh
 
 **For users who prefer clicking:**
 1. Double-click **`ANALYZE-MY-DUMP.bat`**
-2. When prompted, enter the full path to your RocketChat dump folder
-3. Wait for the analysis to complete
-4. Your HTML report will open automatically!
+2. When prompted, enter: `test-dump\standard-dump.json` (for our sample data)
+3. OR enter the full path to your RocketChat dump folder
+4. Wait for the analysis to complete
+5. Your HTML report will open automatically!
 
 ### Using the Easy Commands
 
-**If you have a RocketChat support dump folder:**
+**Test with our sample data first:**
+
+```powershell
+# Windows PowerShell - Test with comprehensive sample
+.\analyze.ps1 -DumpPath "test-dump\standard-dump.json" -OutputFormat HTML
+
+# Windows PowerShell - Test with minimal sample  
+.\analyze.ps1 -DumpPath "test-dump\minimal-dump.json" -OutputFormat HTML
+
+# Mac/Linux - Test with comprehensive sample
+./analyze.sh --format html --output test-report.html test-dump/standard-dump.json
+```
+
+**For real RocketChat support dump folders:**
 
 ```powershell
 # Windows PowerShell
@@ -181,16 +200,6 @@ chmod +x scripts/*.sh
 
 # Mac/Linux
 ./analyze.sh --format html --output my-report.html /path/to/your/support-dump
-```
-
-**If you want to use our test data:**
-
-```powershell
-# Windows PowerShell  
-.\analyze.ps1 -DumpPath ".\test-dump" -OutputFormat HTML
-
-# Mac/Linux
-./analyze.sh --format html --output test-report.html ./test-dump
 ```
 
 ---
