@@ -1,6 +1,19 @@
 # 🚀 RocketChat Support Dump Analyzer
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](htt## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [🆕 **Beginner's Guide**](docs/GETTING-STARTED-FOR-BEGINNERS.md) | **Complete step-by-step setup for first-time users** |
+| [⚡ Installation Guide](docs/INSTALLATION.md) | Quick 5-minute setup |
+| [📖 Quick Start Guide](docs/QUICK-START.md) | Get started in 5 minutes |
+| [🏗️ Architecture](docs/ARCHITECTURE.md) | Technical architecture and design |
+| [🧪 Testing Guide](docs/TESTING-GUIDE.md) | Comprehensive testing procedures |
+| [🚀 Production Ready](docs/PRODUCTION-READY.md) | Production deployment guide |
+| [📊 Usage Examples](docs/USAGE.md) | Detailed usage instructions |
+| [🔄 Compatibility](docs/COMPATIBILITY.md) | Platform compatibility matrix |
+| [📝 Changelog](docs/CHANGELOG.md) | Version history and changes |
+| [🤝 Contributing](docs/CONTRIBUTING.md) | Contribution guidelines |rce.org/licenses/MIT)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![Bash](https://img.shields.io/badge/Bash-4.0%2B-green.svg)](https://www.gnu.org/software/bash/)
 [![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)](./docs/PRODUCTION-READY.md)
@@ -19,23 +32,31 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 
 ## 🚀 Quick Start
 
-### Option 1: Easy Testing (Recommended)
+### 🆕 **New to Command Line Tools?**
+👉 **[Complete Beginner's Guide](docs/GETTING-STARTED-FOR-BEGINNERS.md)** 👈  
+*Never used PowerShell or terminal before? This guide walks you through everything from scratch.*
+
+### ⚡ **For Everyone Else**
+
+**Test it works:**
 ```bash
 # Windows
-tests\test-analyzer.bat
+.\test.ps1
 
 # Linux/macOS  
-./tests/test-analyzer.sh
+./test.sh
 ```
 
-### Option 2: Direct Usage
+**Analyze your dump:**
 ```powershell
-# PowerShell (Windows/Linux/macOS)
-.\scripts\Analyze-RocketChatDump.ps1 -DumpPath "C:\path\to\dump" -OutputFormat HTML
+# Windows PowerShell
+.\analyze.ps1 -DumpPath "C:\path\to\dump" -OutputFormat HTML
 
-# Bash (Linux/macOS)
-./scripts/analyze-rocketchat-dump.sh --format html --output report.html /path/to/dump
+# Linux/macOS Bash
+./analyze.sh --format html --output report.html /path/to/dump
 ```
+
+**That's it!** Your HTML report opens automatically in your browser.
 
 ## 📁 Project Structure
 
