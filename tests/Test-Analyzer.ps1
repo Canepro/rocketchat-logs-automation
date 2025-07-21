@@ -23,7 +23,7 @@ if ($PSVersionTable.PSVersion.Major -lt 5) {
 Write-Host "✅ PowerShell version: $($PSVersionTable.PSVersion)" -ForegroundColor Green
 
 # Check if modules exist
-$modulesPath = Join-Path $PSScriptRoot "modules"
+$modulesPath = Join-Path (Split-Path $PSScriptRoot -Parent) "modules"
 $requiredModules = @(
     "RocketChatLogParser.psm1",
     "RocketChatAnalyzer.psm1", 
@@ -41,7 +41,7 @@ foreach ($module in $requiredModules) {
 }
 
 # Check if config file exists
-$configPath = Join-Path $PSScriptRoot "config\analysis-rules.json"
+$configPath = Join-Path (Split-Path $PSScriptRoot -Parent) "config\analysis-rules.json"
 if (Test-Path $configPath) {
     Write-Host "✅ Configuration file found" -ForegroundColor Green
 } else {
@@ -50,7 +50,7 @@ if (Test-Path $configPath) {
 }
 
 # Check if main script exists
-$mainScript = Join-Path $PSScriptRoot "Analyze-RocketChatDump.ps1"
+$mainScript = Join-Path (Split-Path $PSScriptRoot -Parent) "scripts\Analyze-RocketChatDump.ps1"
 if (Test-Path $mainScript) {
     Write-Host "✅ Main script found" -ForegroundColor Green
 } else {

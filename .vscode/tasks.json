@@ -9,7 +9,7 @@
 				"-ExecutionPolicy",
 				"Bypass",
 				"-File",
-				"${workspaceFolder}\\Test-Analyzer.ps1"
+				"${workspaceFolder}\\tests\\Test-Analyzer.ps1"
 			],
 			"group": "test",
 			"presentation": {
@@ -25,7 +25,7 @@
 			"type": "shell",
 			"command": "bash",
 			"args": [
-				"${workspaceFolder}/test-analyzer.sh"
+				"./tests/test-analyzer.sh"
 			],
 			"group": "test",
 			"presentation": {
@@ -43,7 +43,11 @@
 			},
 			"windows": {
 				"command": "wsl",
-				"args": ["bash", "${workspaceFolder}/test-analyzer.sh"]
+				"args": [
+					"bash",
+					"-c",
+					"cd /mnt/c/Users/i/Rocketchat_Logs_Automation && bash ./tests/test-analyzer.sh"
+				]
 			}
 		},
 		{
