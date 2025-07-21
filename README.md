@@ -1,6 +1,6 @@
 # 🚀 RocketChat Support Dump Analyzer
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](htt## 📚 Documentation
+[![License: MIT](https://img.shields.io/badge/License-MIT-yello└── 📂 test-dum## 📚 Documentation
 
 | Document | Description |
 |----------|-------------|
@@ -13,7 +13,13 @@
 | [📊 Usage Examples](docs/USAGE.md) | Detailed usage instructions |
 | [🔄 Compatibility](docs/COMPATIBILITY.md) | Platform compatibility matrix |
 | [📝 Changelog](docs/CHANGELOG.md) | Version history and changes |
-| [🤝 Contributing](docs/CONTRIBUTING.md) | Contribution guidelines |rce.org/licenses/MIT)
+| [🤝 Contributing](docs/CONTRIBUTING.md) | Contribution guidelines |
+
+## 📋 Prerequisites       # Sample test data
+    └── (RocketChat support dump samples)
+```
+
+## 📚 Documentations://opensource.org/licenses/MIT)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
 [![Bash](https://img.shields.io/badge/Bash-4.0%2B-green.svg)](https://www.gnu.org/software/bash/)
 [![Production Ready](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)](./docs/PRODUCTION-READY.md)
@@ -149,20 +155,31 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 
 ### Basic Analysis
 ```powershell
-# Generate HTML report
-.\scripts\Analyze-RocketChatDump.ps1 -DumpPath "C:\dump" -OutputFormat HTML -ExportPath "report.html"
+# Generate HTML report (using new entry points)
+.\analyze.ps1 -DumpPath "C:\dump" -OutputFormat HTML
 
-# Console output with warnings only
-.\scripts\Analyze-RocketChatDump.ps1 -DumpPath "C:\dump" -Severity Warning
+# Console output with warnings only  
+.\analyze.ps1 -DumpPath "C:\dump" -OutputFormat Console
 ```
 
 ### Advanced Options
 ```bash
-# Custom configuration with verbose output
-./scripts/analyze-rocketchat-dump.sh --config custom-rules.json --verbose --severity error /path/to/dump
+# Bash version with HTML output
+./analyze.sh --format html --output analysis.html /path/to/dump
 
 # JSON export for automation
-./scripts/analyze-rocketchat-dump.sh --format json --output analysis.json /path/to/dump
+./analyze.sh --format json --output analysis.json /path/to/dump
+```
+
+### Testing Options
+```bash
+# Quick test (2-3 minutes)
+.\test.ps1          # Windows
+./test.sh           # Linux/macOS
+
+# Comprehensive test (5-10 minutes)  
+.\test.ps1 full     # Windows
+./test.sh full      # Linux/macOS
 ```
 
 ## 🧪 Testing & Validation
@@ -170,19 +187,22 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 ### Quick Validation (2-3 minutes)
 ```bash
 # Test both PowerShell and Bash versions
-./tests/test-analyzer.sh
+.\test.ps1    # Windows
+./test.sh     # Linux/macOS
 ```
 
 ### Production Readiness Test (5-10 minutes)
 ```bash
 # Comprehensive validation suite
-./tests/test-analyzer.sh full
+.\test.ps1 full    # Windows
+./test.sh full     # Linux/macOS
 ```
 
 ### Complete Test Suite (10-20 minutes)
 ```bash
 # Test all available dumps with full validation
-./tests/test-analyzer.sh all
+.\test.ps1 all     # Windows
+./test.sh all      # Linux/macOS
 ```
 
 See [Testing Guide](./docs/TESTING-GUIDE.md) for detailed testing documentation.
@@ -253,4 +273,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**⚡ Ready to analyze your RocketChat environment? Start with `./tests/test-analyzer.sh` to validate everything works!**
+**⚡ Ready to analyze your RocketChat environment? Start with `.\test.ps1` (Windows) or `./test.sh` (Linux/macOS) to validate everything works!**
