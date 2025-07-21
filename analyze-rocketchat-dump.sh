@@ -12,7 +12,7 @@ echo "*** CUSTOM DEBUG: Script starting - this proves we're running the right fi
 # Usage: ./analyze-rocketchat-dump.sh [OPTIONS] DUMP_PATH
 #
 # Author: Support Engineering Team
-# Version: 1.2.0
+# Version: 1.4.0
 # Requires: bash 4.0+, jq, grep, awk, sed
 #
 
@@ -2263,8 +2263,13 @@ EOF
                                 local total=${ANALYSIS_RESULTS[stats_memory_mb]:-1}
                                 local free=${ANALYSIS_RESULTS[stats_memory_free_mb]:-0}
                                 local used=$((total - free))
-                                local usage_pct=$((used * 100 / total))
-                                echo "${usage_pct}%"
+                                # Prevent division by zero
+                                if [[ $total -gt 0 ]]; then
+                                    local usage_pct=$((used * 100 / total))
+                                    echo "${usage_pct}%"
+                                else
+                                    echo "N/A"
+                                fi
                             )</span>
                         </div>
                     </div>
@@ -2364,8 +2369,18 @@ EOF
                     <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 15px 0;">
 EOF
             
-            # Parse apps JSON and create interactive entries
-            local apps_parsed=$(jq -r '.apps[]? // empty | @base64' "${DUMP_FILES[apps]}" 2>/dev/null | head -10)
+            # Parse apps JSON and create interactive entries with enhanced parsing
+            local apps_parsed=""
+            if jq -e '.apps and (.apps | type == "array")' "${DUMP_FILES[apps]}" >/dev/null 2>&1; then
+                # Structure: {"apps": [...]}
+                apps_parsed=$(jq -r '.apps[] | @base64' "${DUMP_FILES[apps]}" 2>/dev/null | head -15)
+            elif jq -e 'type == "array"' "${DUMP_FILES[apps]}" >/dev/null 2>&1; then
+                # Structure: [...]
+                apps_parsed=$(jq -r '.[] | @base64' "${DUMP_FILES[apps]}" 2>/dev/null | head -15)
+            elif jq -e 'type == "object"' "${DUMP_FILES[apps]}" >/dev/null 2>&1; then
+                # Single object or other structure
+                apps_parsed=$(jq -r '. | @base64' "${DUMP_FILES[apps]}" 2>/dev/null)
+            fi
             if [[ -n "$apps_parsed" ]]; then
                 while IFS= read -r app_data; do
                     if [[ -n "$app_data" ]]; then
@@ -2565,11 +2580,21 @@ EOF
             
             # Parse and display security settings if settings file exists
             if [[ -f "${DUMP_FILES[settings]}" ]]; then
-                # Extract security-related settings from JSON array, properly escaping values
-                local security_keys="$(jq -r '.[] | select(._id | test("(password|auth|token|secret|ldap|saml|oauth|security|encryption|ssl|tls)"; "i")) | "\(._id)|\(.value // "null")"' "${DUMP_FILES[settings]}" 2>/dev/null | head -20)"
+                # Enhanced security-related settings detection
+                local security_keys="$(jq -r '
+                    if type == "array" then
+                        .[] | select(._id and .value != null) |
+                        select(._id | test("(Accounts_TwoFactorAuthentication|Accounts_RegistrationForm|Accounts_AllowAnonymous|API_Enable_Rate_Limiter|E2E_Enable|LDAP_|SAML_|OAuth|CAS_|password|auth|token|secret|security|encryption|ssl|tls|Federation_|Permission)"; "i")) |
+                        "\(._id)=\(.value)"
+                    else
+                        to_entries[] |
+                        select(.key | test("(Accounts_TwoFactorAuthentication|Accounts_RegistrationForm|Accounts_AllowAnonymous|API_Enable_Rate_Limiter|E2E_Enable|LDAP_|SAML_|OAuth|CAS_|password|auth|token|secret|security|encryption|ssl|tls|Federation_|Permission)"; "i")) |
+                        "\(.key)=\(.value)"
+                    end
+                ' "${DUMP_FILES[settings]}" 2>/dev/null | head -25)"
                 
                 if [[ -n "$security_keys" ]]; then
-                    while IFS='|' read -r setting_name setting_value; do
+                    while IFS='=' read -r setting_name setting_value; do
                         [[ -z "$setting_name" ]] && continue
                         # HTML escape the setting name and value
                         setting_name="$(echo "$setting_name" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g')"
@@ -2626,10 +2651,21 @@ EOF
             
             # Parse and display performance settings
             if [[ -f "${DUMP_FILES[settings]}" ]]; then
-                local performance_keys="$(jq -r '.[] | select(._id | test("(cache|limit|timeout|max|pool|buffer|memory|cpu|performance|rate|throttle)"; "i")) | "\(._id)|\(.value // "null")"' "${DUMP_FILES[settings]}" 2>/dev/null | head -20)"
+                # Enhanced performance-related settings detection
+                local performance_keys="$(jq -r '
+                    if type == "array" then
+                        .[] | select(._id and .value != null) |
+                        select(._id | test("(FileUpload_MaxFileSize|Message_MaxAllowedSize|Log_Level|RetentionPolicy|cache|limit|timeout|max.*size|max.*file|pool|buffer|memory|cpu|performance|rate|throttle|chunk|batch)"; "i")) |
+                        "\(._id)=\(.value)"
+                    else
+                        to_entries[] |
+                        select(.key | test("(FileUpload_MaxFileSize|Message_MaxAllowedSize|Log_Level|RetentionPolicy|cache|limit|timeout|max.*size|max.*file|pool|buffer|memory|cpu|performance|rate|throttle|chunk|batch)"; "i")) |
+                        "\(.key)=\(.value)"
+                    end
+                ' "${DUMP_FILES[settings]}" 2>/dev/null | head -25)"
                 
                 if [[ -n "$performance_keys" ]]; then
-                    while IFS='|' read -r setting_name setting_value; do
+                    while IFS='=' read -r setting_name setting_value; do
                         [[ -z "$setting_name" ]] && continue
                         # HTML escape the setting name and value
                         setting_name="$(echo "$setting_name" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g')"
@@ -2682,23 +2718,34 @@ EOF
                 
                 local category_pattern=""
                 case "$category" in
-                    "Accounts") category_pattern="(accounts|user|profile|avatar)" ;;
-                    "LDAP") category_pattern="ldap" ;;
-                    "SAML") category_pattern="saml" ;;
-                    "FileUpload") category_pattern="(fileupload|upload|file)" ;;
-                    "Email") category_pattern="(email|smtp|mail)" ;;
-                    "Omnichannel") category_pattern="omnichannel" ;;
-                    "Message") category_pattern="(message|msg|chat)" ;;
-                    "Layout") category_pattern="(layout|ui|theme|css)" ;;
-                    "API") category_pattern="(api|rest|webhook)" ;;
-                    "Push") category_pattern="(push|notification)" ;;
+                    "Accounts") category_pattern="(Accounts_|accounts|user|profile|avatar|login|registration)" ;;
+                    "LDAP") category_pattern="(LDAP_|ldap)" ;;
+                    "SAML") category_pattern="(SAML_|saml)" ;;
+                    "FileUpload") category_pattern="(FileUpload_|upload|file|storage|media)" ;;
+                    "Email") category_pattern="(Email_|SMTP_|email|smtp|mail)" ;;
+                    "Omnichannel") category_pattern="(Omnichannel_|omnichannel|livechat)" ;;
+                    "Message") category_pattern="(Message_|message|msg|chat|room)" ;;
+                    "Layout") category_pattern="(Layout_|UI_|layout|ui|theme|css|appearance)" ;;
+                    "API") category_pattern="(API_|REST_|api|rest|webhook)" ;;
+                    "Push") category_pattern="(Push_|push|notification|mobile)" ;;
                 esac
                 
-                local category_settings="$(jq -r ".[] | select(._id | test(\"$category_pattern\"; \"i\")) | \"\(._id)|\(.value // \"null\")\"" "${DUMP_FILES[settings]}" 2>/dev/null | head -15)"
-                local settings_count="$(echo "$category_settings" | wc -l 2>/dev/null || echo "0")"
-                if [[ -z "$category_settings" ]]; then
-                    settings_count=0
-                fi
+                # Enhanced category settings extraction
+                local category_settings="$(jq -r "
+                    if type == \"array\" then
+                        .[] | select(._id and .value != null) |
+                        select(._id | test(\"$category_pattern\"; \"i\")) |
+                        \"\(._id)=\(.value)\"
+                    else
+                        to_entries[] |
+                        select(.key | test(\"$category_pattern\"; \"i\")) |
+                        \"\(.key)=\(.value)\"
+                    end
+                " "${DUMP_FILES[settings]}" 2>/dev/null | head -20)"
+                local settings_count="$(echo "$category_settings" | grep -c . 2>/dev/null || echo "0")"
+                # Clean the settings count to ensure it's numeric
+                settings_count=$(echo "$settings_count" | tr -d '[:space:]' | grep -o '[0-9]*' | head -1)
+                settings_count=${settings_count:-0}
                 
                 if [[ $settings_count -gt 0 ]]; then
                     local category_icon
@@ -2820,7 +2867,10 @@ EOF
         local total=${ANALYSIS_RESULTS[stats_memory_mb]}
         local free=${ANALYSIS_RESULTS[stats_memory_free_mb]:-0}
         local used=$((total - free))
-        memory_usage_pct=$((used * 100 / total))
+        # Prevent division by zero
+        if [[ $total -gt 0 ]]; then
+            memory_usage_pct=$((used * 100 / total))
+        fi
         
         if [[ $memory_usage_pct -gt 85 ]]; then
             echo "                            <li style='margin: 10px 0; padding: 5px 0;'>💾 Optimize memory usage - currently at ${memory_usage_pct}% capacity</li>"
@@ -3036,7 +3086,7 @@ EOF
                                 </div>
                                 <div>
                                     <strong>🖥️ Analyzer:</strong><br>
-                                    <span style="color: #6c757d;">Bash v1.2.0</span>
+                                    <span style="color: #6c757d;">Bash v1.4.0</span>
                                 </div>
                                 <div>
                                     <strong>⚡ Performance:</strong><br>
@@ -3061,13 +3111,13 @@ EOF
                         $(if [[ -n "${DUMP_FILES[apps]:-}" ]]; then echo "✅ Apps"; else echo "❌ Apps"; fi)
                     </p>
                     <p><strong>Generated:</strong> $(date '+%Y-%m-%d %H:%M:%S')</p>
-                    <p><strong>Tool Version:</strong> RocketChat Support Dump Analyzer v1.2.0 (Bash)</p>
+                    <p><strong>Tool Version:</strong> RocketChat Support Dump Analyzer v1.4.0 (Bash)</p>
                 </div>
             </div>
         </div>
         
         <div class="footer">
-            <p>Generated by RocketChat Support Dump Analyzer v1.2.0 | For detailed analysis, export to JSON or CSV format</p>
+            <p>Generated by RocketChat Support Dump Analyzer v1.4.0 | For detailed analysis, export to JSON or CSV format</p>
             <p>💡 <strong>Tip:</strong> Click on expandable sections above to view detailed information</p>
         </div>
     </div>
@@ -3111,26 +3161,69 @@ generate_report() {
                 echo "$output" > "$EXPORT_PATH"
                 log "SUCCESS" "HTML report exported to: $EXPORT_PATH"
                 
-                # Attempt to open in default browser - cross-platform support
+                # Attempt to open in default browser - enhanced cross-platform support
+                local opened=false
+                
+                # Detect environment and use appropriate method
                 if [[ -n "${WINDIR:-}" ]] || command -v powershell.exe >/dev/null 2>&1 || command -v cmd.exe >/dev/null 2>&1; then
                     # Windows environment (including PowerShell, CMD, Git Bash, WSL)
+                    log "VERBOSE" "Detected Windows environment - attempting to open browser"
+                    
+                    # Try PowerShell first (most reliable on Windows)
                     if command -v powershell.exe >/dev/null 2>&1; then
-                        powershell.exe -Command "Start-Process '$EXPORT_PATH'" 2>/dev/null && log "INFO" "Opening report in default browser..." || log "INFO" "Report saved successfully. Please open manually: $EXPORT_PATH"
-                    elif command -v cmd.exe >/dev/null 2>&1; then
-                        cmd.exe /c start "" "$EXPORT_PATH" 2>/dev/null && log "INFO" "Opening report in default browser..." || log "INFO" "Report saved successfully. Please open manually: $EXPORT_PATH"
-                    elif command -v start >/dev/null 2>&1; then
-                        start "$EXPORT_PATH" 2>/dev/null && log "INFO" "Opening report in default browser..." || log "INFO" "Report saved successfully. Please open manually: $EXPORT_PATH"
-                    else
-                        log "INFO" "Report saved successfully. Please open manually: $EXPORT_PATH"
+                        if powershell.exe -Command "Start-Process '$EXPORT_PATH'" 2>/dev/null; then
+                            log "INFO" "Opening report in default browser via PowerShell..."
+                            opened=true
+                        fi
                     fi
+                    
+                    # Try CMD if PowerShell fails
+                    if [[ "$opened" != "true" ]] && command -v cmd.exe >/dev/null 2>&1; then
+                        if cmd.exe /c start "" "$EXPORT_PATH" 2>/dev/null; then
+                            log "INFO" "Opening report in default browser via CMD..."
+                            opened=true
+                        fi
+                    fi
+                    
+                    # Try Windows start command if available
+                    if [[ "$opened" != "true" ]] && command -v start >/dev/null 2>&1; then
+                        if start "$EXPORT_PATH" 2>/dev/null; then
+                            log "INFO" "Opening report in default browser via start command..."
+                            opened=true
+                        fi
+                    fi
+                    
+                    # Try explorer.exe as fallback
+                    if [[ "$opened" != "true" ]] && command -v explorer.exe >/dev/null 2>&1; then
+                        if explorer.exe "$EXPORT_PATH" 2>/dev/null; then
+                            log "INFO" "Opening report via Windows Explorer..."
+                            opened=true
+                        fi
+                    fi
+                    
                 elif command -v xdg-open >/dev/null 2>&1; then
-                    # Linux
-                    xdg-open "$EXPORT_PATH" 2>/dev/null && log "INFO" "Opening report in default browser..." || log "INFO" "Report saved successfully. Please open manually: $EXPORT_PATH"
+                    # Linux with xdg-open
+                    log "VERBOSE" "Detected Linux environment - using xdg-open"
+                    if xdg-open "$EXPORT_PATH" 2>/dev/null; then
+                        log "INFO" "Opening report in default browser via xdg-open..."
+                        opened=true
+                    fi
+                    
                 elif command -v open >/dev/null 2>&1; then
                     # macOS
-                    open "$EXPORT_PATH" 2>/dev/null && log "INFO" "Opening report in default browser..." || log "INFO" "Report saved successfully. Please open manually: $EXPORT_PATH"
-                else
+                    log "VERBOSE" "Detected macOS environment - using open command"
+                    if open "$EXPORT_PATH" 2>/dev/null; then
+                        log "INFO" "Opening report in default browser via macOS open..."
+                        opened=true
+                    fi
+                fi
+                
+                # Fallback message if nothing worked
+                if [[ "$opened" != "true" ]]; then
                     log "INFO" "Report saved successfully. Please open manually: $EXPORT_PATH"
+                    log "VERBOSE" "Unable to auto-open browser. Manual open required."
+                else
+                    log "VERBOSE" "Browser opening attempt completed successfully"
                 fi
             else
                 echo "$output"
