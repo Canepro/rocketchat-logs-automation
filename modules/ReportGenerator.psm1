@@ -1544,16 +1544,16 @@ $(foreach ($issue in $settingsData.Issues) {
                     default { "⚙️" }
                 }
 
-                $html += @"
-                        <div style="border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            <div style="background: linear-gradient(90deg, #007acc, #0056b3); color: white; padding: 15px; cursor: pointer;" onclick="toggleSettingsCategory('$categoryId')">
-                                <h4 style="margin: 0; display: flex; align-items: center; gap: 8px;">
-                                    <span>$categoryIcon</span> $categoryName Settings ($categoryCount)
-                                    <span style="margin-left: auto;">▼</span>
-                                </h4>
-                            </div>
-                            <div id="$categoryId" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
-"@
+                # Build category HTML - do not use here-strings inside the main here-string
+                $categoryHtml = ""
+                $categoryHtml += "                        <div style=`"border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);`">`n"
+                $categoryHtml += "                            <div style=`"background: linear-gradient(90deg, #007acc, #0056b3); color: white; padding: 15px; cursor: pointer;`" onclick=`"toggleSettingsCategory('$categoryId')`">`n"
+                $categoryHtml += "                                <h4 style=`"margin: 0; display: flex; align-items: center; gap: 8px;`">`n"
+                $categoryHtml += "                                    <span>$categoryIcon</span> $categoryName Settings ($categoryCount)`n"
+                $categoryHtml += "                                    <span style=`"margin-left: auto;`">▼</span>`n"
+                $categoryHtml += "                                </h4>`n"
+                $categoryHtml += "                            </div>`n"
+                $categoryHtml += "                            <div id=`"$categoryId`" style=`"display: none; padding: 15px; max-height: 300px; overflow-y: auto;`">`n"
                 
                 # Add settings for this category
                 foreach ($settingName in ($categorySettings | Sort-Object)) {
@@ -1565,18 +1565,17 @@ $(foreach ($issue in $settingsData.Issues) {
                     } else { 
                         $settingValue 
                     }
-                    $html += @"
-                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>
-                                    <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>
-                                    <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>
-                                </div>
-"@
+                    $categoryHtml += "                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>`n"
+                    $categoryHtml += "                                    <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>`n"
+                    $categoryHtml += "                                    <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>`n"
+                    $categoryHtml += "                                </div>`n"
                 }
                 
-                $html += @"
-                            </div>
-                        </div>
-"@
+                $categoryHtml += "                            </div>`n"
+                $categoryHtml += "                        </div>`n"
+                
+                # Add the complete category HTML to the main HTML
+                $html += $categoryHtml
             }
         }
 
@@ -1707,4 +1706,3 @@ $(foreach ($issue in $settingsData.Issues) {
 }
 
 Export-ModuleMember -Function Write-ConsoleReport, New-JSONReport, New-CSVReport, New-HTMLReport
-
