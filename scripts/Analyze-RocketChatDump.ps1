@@ -63,7 +63,7 @@ param(
 Write-Host "*** SCRIPT DEBUG: Parameters parsed - OutputFormat is '$OutputFormat' ***" -ForegroundColor Red
 
 # Import required modules
-$ModulePath = Join-Path $PSScriptRoot "modules"
+$ModulePath = Join-Path (Split-Path $PSScriptRoot -Parent) "modules"
 Write-Host "*** DEBUG: Starting script execution ***" -ForegroundColor Magenta
 Import-Module (Join-Path $ModulePath "RocketChatLogParser.psm1") -Force
 Import-Module (Join-Path $ModulePath "RocketChatAnalyzer.psm1") -Force
