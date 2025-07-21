@@ -284,21 +284,27 @@ function Invoke-SettingsAnalysis {
         
         $settingsContent = Get-Content $SettingsFile -Raw | ConvertFrom-Json
         
+        # Handle different JSON structures
         if ($settingsContent -is [array]) {
+            # Array of settings
             $settings = $settingsContent
+        } elseif ($settingsContent.settings) {
+            # Comprehensive dump format - extract settings section
+            $settings = $settingsContent.settings
         } else {
+            # Single setting or unknown format
             $settings = @($settingsContent)
         }
         
         foreach ($setting in $settings) {
-            $key = $setting._id ?? $setting.key ?? $setting.name
-            $value = $setting.value ?? $setting.setting
+            $key = if ($setting._id) { $setting._id } elseif ($setting.key) { $setting.key } else { $setting.name }
+            $value = if ($setting.value -ne $null) { $setting.value } elseif ($setting.setting -ne $null) { $setting.setting } else { $null }
             
             if ($key) {
                 $results.Settings[$key] = $value
                 
-                # Check security-related settings
-                if ($key -match "password|auth|security|token|secret") {
+                # Check security-related settings (enhanced patterns from bash version)
+                if ($key -match "password|auth|security|token|secret|saml|ldap|oauth|2fa|twofactor|cors|policy|encryption|ssl|tls") {
                     $results.SecuritySettings[$key] = $value
                     
                     # Check for weak security configurations
@@ -324,8 +330,8 @@ function Invoke-SettingsAnalysis {
                     }
                 }
                 
-                # Check performance-related settings
-                if ($key -match "limit|timeout|max|cache|size") {
+                # Check performance-related settings (enhanced patterns from bash version)
+                if ($key -match "limit|timeout|max|cache|size|pool|buffer|memory|cpu|performance|rate|throttle") {
                     $results.PerformanceSettings[$key] = $value
                     
                     # Check for performance issues
@@ -413,60 +419,65 @@ function Invoke-StatisticsAnalysis {
         
         $statsContent = Get-Content $StatisticsFile -Raw | ConvertFrom-Json
         
-        # Extract server information
-        if ($statsContent.version) {
-            $results.ServerInfo.Version = $statsContent.version
-        }
-        if ($statsContent.uniqueId) {
-            $results.ServerInfo.UniqueId = $statsContent.uniqueId
-        }
-        if ($statsContent.installedAt) {
-            $results.ServerInfo.InstalledAt = $statsContent.installedAt
+        # Handle different JSON structures
+        if ($statsContent.statistics) {
+            # Comprehensive dump format or nested statistics
+            $stats = $statsContent.statistics
+            # Also extract top-level server info
+            if ($statsContent.version) { $results.ServerInfo.Version = $statsContent.version }
+            if ($statsContent.uniqueId) { $results.ServerInfo.UniqueId = $statsContent.uniqueId }
+            if ($statsContent.installedAt) { $results.ServerInfo.InstalledAt = $statsContent.installedAt }
+        } else {
+            # Direct statistics format - use the content as stats
+            $stats = $statsContent
+            # Extract server information from the same level
+            if ($statsContent.version) { $results.ServerInfo.Version = $statsContent.version }
+            if ($statsContent.uniqueId) { $results.ServerInfo.UniqueId = $statsContent.uniqueId }
+            if ($statsContent.installedAt) { $results.ServerInfo.InstalledAt = $statsContent.installedAt }
         }
         
-        # Extract performance metrics
-        if ($statsContent.statistics) {
-            $stats = $statsContent.statistics
-            
-            # Memory usage
-            if ($stats.process) {
-                $results.PerformanceMetrics.Memory = @{
-                    Used = $stats.process.memory?.rss
-                    Heap = $stats.process.memory?.heapUsed
-                    External = $stats.process.memory?.external
-                }
-                
-                # Check memory thresholds
-                if ($stats.process.memory?.rss -gt 1000000000) { # 1GB
-                    $results.Issues += @{
-                        Type = "Performance"
-                        Severity = "Warning"
-                        Message = "High memory usage detected: $($stats.process.memory.rss / 1000000)MB"
-                        Metric = "Memory"
-                        Value = $stats.process.memory.rss
-                    }
-                }
+        # Extract server information (moved to above for better structure)
+        
+        # Extract performance metrics from stats object
+        
+        # Memory usage
+        if ($stats -and $stats.process) {
+            $results.PerformanceMetrics.Memory = @{
+                Used = if ($stats.process.memory) { $stats.process.memory.rss } else { $null }
+                Heap = if ($stats.process.memory) { $stats.process.memory.heapUsed } else { $null }
+                External = if ($stats.process.memory) { $stats.process.memory.external } else { $null }
             }
             
-            # User statistics
-            if ($stats.totalUsers) {
-                $results.PerformanceMetrics.Users = @{
-                    Total = $stats.totalUsers
-                    Online = $stats.onlineUsers
-                    Away = $stats.awayUsers
-                    Offline = $stats.offlineUsers
+            # Check memory thresholds
+            if ($stats.process.memory -and $stats.process.memory.rss -gt 1000000000) { # 1GB
+                $results.Issues += @{
+                    Type = "Performance"
+                    Severity = "Warning"
+                    Message = "High memory usage detected: $($stats.process.memory.rss / 1000000)MB"
+                    Metric = "Memory"
+                    Value = $stats.process.memory.rss
                 }
+        }
+        
+        # User statistics
+        if ($stats -and $stats.totalUsers) {
+            $results.PerformanceMetrics.Users = @{
+                Total = $stats.totalUsers
+                Online = if ($stats.onlineUsers) { $stats.onlineUsers } else { 0 }
+                Away = if ($stats.awayUsers) { $stats.awayUsers } else { 0 }
+                Offline = if ($stats.offlineUsers) { $stats.offlineUsers } else { 0 }
             }
-            
-            # Message statistics
-            if ($stats.totalMessages) {
-                $results.PerformanceMetrics.Messages = @{
-                    Total = $stats.totalMessages
-                    Channels = $stats.totalChannels
-                    PrivateGroups = $stats.totalPrivateGroups
-                    DirectMessages = $stats.totalDirect
-                }
+        }
+        
+        # Message statistics
+        if ($stats -and $stats.totalMessages) {
+            $results.PerformanceMetrics.Messages = @{
+                Total = $stats.totalMessages
+                Channels = if ($stats.totalChannels) { $stats.totalChannels } else { 0 }
+                PrivateGroups = if ($stats.totalPrivateGroups) { $stats.totalPrivateGroups } else { 0 }
+                DirectMessages = if ($stats.totalDirect) { $stats.totalDirect } else { 0 }
             }
+        }
         }
         
         Write-Verbose "Statistics analysis complete. Found $($results.Issues.Count) issues"
@@ -655,16 +666,16 @@ function Invoke-AppsAnalysis {
         }
         
         foreach ($app in $appsData) {
-            $appName = $app.name ?? $app.id ?? $app._id ?? "Unknown App"
-            $appVersion = $app.version ?? "Unknown"
-            $appStatus = $app.status ?? $app.enabled ?? "Unknown"
+            $appName = $app.name -or $app.id -or $app._id -or "Unknown App"
+            $appVersion = $app.version -or "Unknown"
+            $appStatus = $app.status -or $app.enabled -or "Unknown"
             
             # Store app information
             $results.InstalledApps[$appName] = @{
                 Version = $appVersion
                 Status = $appStatus
-                Description = $app.description ?? ""
-                Author = $app.author ?? ""
+                Description = $app.description -or ""
+                Author = $app.author -or ""
             }
             
             # Check for security-related apps

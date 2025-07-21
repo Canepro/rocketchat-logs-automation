@@ -177,13 +177,41 @@ function Get-DumpFiles {
         $files.Omnichannel = Get-ChildItem -Path $Path -Filter "*omnichannel*.json" | Select-Object -First 1
         $files.Apps = Get-ChildItem -Path $Path -Filter "*apps*.json" | Select-Object -First 1
     } else {
-        # Single file - determine type by name
+        # Single file - determine type by name or inspect content
         $fileName = Split-Path $Path -Leaf
-        if ($fileName -match "log") { $files.Log = Get-Item $Path }
-        elseif ($fileName -match "settings") { $files.Settings = Get-Item $Path }
-        elseif ($fileName -match "statistics") { $files.Statistics = Get-Item $Path }
-        elseif ($fileName -match "omnichannel") { $files.Omnichannel = Get-Item $Path }
-        elseif ($fileName -match "apps") { $files.Apps = Get-Item $Path }
+        $fileItem = Get-Item $Path
+        
+        if ($fileName -match "log") { 
+            $files.Log = $fileItem 
+        }
+        elseif ($fileName -match "settings") { 
+            $files.Settings = $fileItem 
+        }
+        elseif ($fileName -match "statistics") { 
+            $files.Statistics = $fileItem 
+        }
+        elseif ($fileName -match "omnichannel") { 
+            $files.Omnichannel = $fileItem 
+        }
+        elseif ($fileName -match "apps") { 
+            $files.Apps = $fileItem 
+        }
+        else {
+            # Check if it's a comprehensive JSON file with multiple sections
+            try {
+                $content = Get-Content $Path | ConvertFrom-Json
+                if ($content.settings -or $content.users -or $content.channels) {
+                    # This appears to be a comprehensive dump file
+                    Write-Status "Detected comprehensive dump file containing multiple sections" "Info"
+                    $files.Settings = $fileItem  # Treat as settings file for analysis
+                    $files.Statistics = $fileItem  # Also use for statistics
+                    $files.Log = $fileItem  # Also use for log analysis if messages present
+                }
+            }
+            catch {
+                Write-Status "Unable to determine file type for: $fileName" "Warning"
+            }
+        }
     }
     
     return $files
@@ -311,10 +339,59 @@ try {
             $fullPath = (Resolve-Path $htmlFile).Path
             Write-Status "HTML report saved to: $fullPath" "Success"
             
-            # Attempt to open in default browser
+            # Attempt to open in default browser with multiple fallback methods
             try {
-                Start-Process $fullPath
-                Write-Status "Opening report in default browser..." "Info"
+                $opened = $false
+                Write-Status "Attempting to open report in default browser..." "Info"
+                
+                # Method 1: Try Start-Process (most common)
+                try {
+                    Start-Process $fullPath -ErrorAction Stop
+                    $opened = $true
+                    Write-Verbose "Successfully opened with Start-Process"
+                } catch {
+                    Write-Verbose "Start-Process failed: $($_.Exception.Message)"
+                }
+                
+                # Method 2: Try Invoke-Item if Start-Process fails
+                if (-not $opened) {
+                    try {
+                        Invoke-Item $fullPath -ErrorAction Stop
+                        $opened = $true
+                        Write-Verbose "Successfully opened with Invoke-Item"
+                    } catch {
+                        Write-Verbose "Invoke-Item failed: $($_.Exception.Message)"
+                    }
+                }
+                
+                # Method 3: Try cmd.exe start as fallback
+                if (-not $opened) {
+                    try {
+                        $startCmd = "cmd.exe /c start `"`" `"$fullPath`""
+                        Invoke-Expression $startCmd -ErrorAction Stop
+                        $opened = $true
+                        Write-Verbose "Successfully opened with cmd.exe start"
+                    } catch {
+                        Write-Verbose "cmd.exe start failed: $($_.Exception.Message)"
+                    }
+                }
+                
+                # Method 4: Try explorer.exe as last resort
+                if (-not $opened) {
+                    try {
+                        Start-Process "explorer.exe" -ArgumentList $fullPath -ErrorAction Stop
+                        $opened = $true
+                        Write-Verbose "Successfully opened with explorer.exe"
+                    } catch {
+                        Write-Verbose "explorer.exe failed: $($_.Exception.Message)"
+                    }
+                }
+                
+                if ($opened) {
+                    Write-Status "Report opened in default browser" "Success"
+                } else {
+                    Write-Status "Unable to auto-open browser. Please open manually: $fullPath" "Info"
+                }
             } catch {
                 Write-Status "Report saved successfully. Please open manually: $fullPath" "Info"
             }

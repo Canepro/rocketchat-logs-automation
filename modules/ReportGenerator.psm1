@@ -7,6 +7,17 @@
     console output, JSON, CSV, and HTML reports.
 #>
 
+# Import required modules
+try {
+    $ModulePath = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
+    $AnalyzerModulePath = Join-Path $ModulePath "RocketChatAnalyzer.psm1"
+    if (Test-Path $AnalyzerModulePath) {
+        Import-Module $AnalyzerModulePath -Force -Global
+    }
+} catch {
+    Write-Warning "Could not import RocketChatAnalyzer module: $($_.Exception.Message)"
+}
+
 function Write-ConsoleReport {
     <#
     .SYNOPSIS
@@ -439,14 +450,6 @@ function New-HTMLReport {
         }
     }
     
-    $securityAnalysis = if ($Results.SettingsAnalysis -and $allIssues.Count -gt 0) { 
-        Get-SecurityAnalysis -Settings $Results.SettingsAnalysis -Issues $allIssues 
-    } elseif ($Results.SettingsAnalysis) {
-        Get-SecurityAnalysis -Settings $Results.SettingsAnalysis -Issues @()
-    } else { 
-        @{} 
-    }
-    
     $html = @"
 <!DOCTYPE html>
 <html lang="en">
@@ -492,19 +495,27 @@ function New-HTMLReport {
         
         /* Collapsible sections with animation */
         .section { 
-            margin-bottom: 30px; 
-            border-radius: 10px;
+            margin-bottom: 50px; 
+            border-radius: 12px;
             overflow: hidden;
+            border: 3px solid #007acc;
+            background: white;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            position: relative;
+            z-index: 10;
+            clear: both;
         }
         .section h2 { 
-            color: #333; 
-            border-left: 4px solid #007acc; 
+            color: white; 
+            border-left: none; 
             padding: 15px;
             margin: 0;
-            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+            background: linear-gradient(90deg, #007acc, #0056b3);
             cursor: pointer;
             transition: all 0.3s ease;
             user-select: none;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
         .section h2:hover {
             background: linear-gradient(90deg, #e9ecef, #dee2e6);
@@ -517,6 +528,9 @@ function New-HTMLReport {
         }
         .collapsible .section-content {
             display: none;
+        }
+        .collapsible.expanded .section-content {
+            display: block;
         }
         
         /* Enhanced health score cards */
@@ -1225,7 +1239,7 @@ $(foreach ($app in ($appsData.InstalledApps.GetEnumerator() | Sort-Object Name))
     "                    <div style='border: 1px solid #dee2e6; border-radius: 6px; padding: 15px; margin: 10px 0; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
                         <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;'>
                             <h4 style='margin: 0; color: #2c3e50; font-size: 1.1em;'>$statusIcon $appName</h4>
-                            <span style='background: $statusColor; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold;'>$($appInfo.Status.ToUpper())</span>
+                            <span style='background: $statusColor; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold;'>$(if ($appInfo.Status -is [string]) { $appInfo.Status.ToUpper() } else { $appInfo.Status.ToString().ToUpper() })</span>
                         </div>
                         <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 0.9em; color: #555;'>
                             <div><strong>Version:</strong> $version</div>
@@ -1302,8 +1316,40 @@ $(foreach ($issue in $appsData.Issues) {
         $totalSettings = $securitySettingsCount + $performanceSettingsCount + $generalSettingsCount
         $issuesCount = if ($settingsData.Issues) { $settingsData.Issues.Count } else { 0 }
 
+        # Add Configuration Analysis section (matches bash version structure)
         $html += @"
-        <div class="section collapsible">
+        <div class="section collapsible expanded">
+            <h2 onclick="toggleSection(this)">⚙️ Configuration Analysis ▼</h2>
+            <div class="section-content">
+                <h3 style="display: flex; align-items: center; gap: 8px; color: #495057;">
+                    <span>📊</span> Settings Overview
+                </h3>
+                <div style="border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; background: #f8f9fa;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+                            <span>Total Settings:</span>
+                            <strong style="color: #007acc;">$totalSettings</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+                            <span style="color: #dc3545;">🔒 Security Issues:</span>
+                            <strong style="color: #dc3545;">0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+                            <span style="color: #28a745;">⚡ Performance Issues:</span>
+                            <strong style="color: #28a745;">0</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #dee2e6;">
+                            <span style="color: #ffc107;">⚠️ Config Warnings:</span>
+                            <strong style="color: #ffc107;">$issuesCount</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Configuration Settings Section -->
+        $html += @"
+        <div class="section collapsible expanded">
             <h2 onclick="toggleSection(this)">⚙️ Configuration Settings ▼</h2>
             <div class="section-content">
                 <div class="stats-grid">
@@ -1389,21 +1435,34 @@ $(foreach ($issue in $settingsData.Issues) {
                                 </h4>
                             </div>
                             <div id="security-settings" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
-$(foreach ($setting in (@($settingsData.SecuritySettings.Keys) | Sort-Object)) {
-    $settingName = $setting
-    $settingValue = $settingsData.SecuritySettings[$settingName]
-    $displayValue = if ($settingValue -is [string] -and $settingValue.Length -gt 50) { 
-        $settingValue.Substring(0, 47) + "..." 
-    } elseif ($null -eq $settingValue) { 
-        "<em style='color: #6c757d;'>null</em>" 
-    } else { 
-        $settingValue 
-    }
-    "                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>
+"@
+            
+            # Add each security setting
+            foreach ($setting in (@($settingsData.SecuritySettings.Keys) | Sort-Object)) {
+                $settingName = $setting
+                $settingValue = $settingsData.SecuritySettings[$settingName]
+                $displayValue = if ($settingValue -is [string] -and $settingValue.Length -gt 50) { 
+                    $settingValue.Substring(0, 47) + "..." 
+                } elseif ($null -eq $settingValue) { 
+                    "<em style='color: #6c757d;'>null</em>" 
+                } else { 
+                    $settingValue 
+                }
+                $html += @"
+                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>
                                     <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>
                                     <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>
-                                </div>"
-})
+                                </div>
+"@
+            }
+            
+            $html += @"
+                            </div>
+                        </div>
+"@ 
+    } else { 
+            
+            $html += @"
                             </div>
                         </div>
 "@
@@ -1420,21 +1479,28 @@ $(foreach ($setting in (@($settingsData.SecuritySettings.Keys) | Sort-Object)) {
                                 </h4>
                             </div>
                             <div id="performance-settings" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
-$(foreach ($setting in (@($settingsData.PerformanceSettings.Keys) | Sort-Object)) {
-    $settingName = $setting
-    $settingValue = $settingsData.PerformanceSettings[$settingName]
-    $displayValue = if ($settingValue -is [string] -and $settingValue.Length -gt 50) { 
-        $settingValue.Substring(0, 47) + "..." 
-    } elseif ($null -eq $settingValue) { 
-        "<em style='color: #6c757d;'>null</em>" 
-    } else { 
-        $settingValue 
-    }
-    "                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>
+"@
+            
+            # Add each performance setting
+            foreach ($setting in (@($settingsData.PerformanceSettings.Keys) | Sort-Object)) {
+                $settingName = $setting
+                $settingValue = $settingsData.PerformanceSettings[$settingName]
+                $displayValue = if ($settingValue -is [string] -and $settingValue.Length -gt 50) { 
+                    $settingValue.Substring(0, 47) + "..." 
+                } elseif ($null -eq $settingValue) { 
+                    "<em style='color: #6c757d;'>null</em>" 
+                } else { 
+                    $settingValue 
+                }
+                $html += @"
+                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>
                                     <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>
                                     <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>
-                                </div>"
-})
+                                </div>
+"@
+            }
+            
+            $html += @"
                             </div>
                         </div>
 "@
@@ -1484,20 +1550,27 @@ $(foreach ($setting in (@($settingsData.PerformanceSettings.Keys) | Sort-Object)
                                 </h4>
                             </div>
                             <div id="$categoryId" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
-$(foreach ($settingName in ($categorySettings | Sort-Object)) {
-    $settingValue = $settingsData.Settings.$settingName
-    $displayValue = if ($settingValue -is [string] -and $settingValue.Length -gt 50) { 
-        $settingValue.Substring(0, 47) + "..." 
-    } elseif ($null -eq $settingValue) { 
-        "<em style='color: #6c757d;'>null</em>" 
-    } else { 
-        $settingValue 
-    }
-    "                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>
+"@
+                
+                # Add settings for this category
+                foreach ($settingName in ($categorySettings | Sort-Object)) {
+                    $settingValue = $settingsData.Settings.$settingName
+                    $displayValue = if ($settingValue -is [string] -and $settingValue.Length -gt 50) { 
+                        $settingValue.Substring(0, 47) + "..." 
+                    } elseif ($null -eq $settingValue) { 
+                        "<em style='color: #6c757d;'>null</em>" 
+                    } else { 
+                        $settingValue 
+                    }
+                    $html += @"
+                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>
                                     <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>
                                     <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>
-                                </div>"
-})
+                                </div>
+"@
+                }
+                
+                $html += @"
                             </div>
                         </div>
 "@
@@ -1509,71 +1582,83 @@ $(foreach ($settingName in ($categorySettings | Sort-Object)) {
                 </div>
             </div>
         </div>
-"@
-    }
-
-    # Add security analysis section
-    if ($securityAnalysis -and $securityAnalysis.SecurityScore) {
-        $html += @"
-        <div class="section">
-            <h2>🔒 Security Analysis</h2>
-            <div class="score-card $(if ($securityAnalysis.SecurityScore -ge 90) { 'score-excellent' } elseif ($securityAnalysis.SecurityScore -ge 70) { 'score-good' } else { 'score-poor' })">
-                <h3>Security Score: $($securityAnalysis.SecurityScore)%</h3>
-            </div>
-            
-$(if ($securityAnalysis.SecurityIssues.Count -gt 0) {
-"            <h3>Security Issues</h3>
-            <ul class='issue-list'>
-$(foreach ($issue in $securityAnalysis.SecurityIssues) {
-    "                <li class='issue-item issue-warning'>• $issue</li>"
-})
-            </ul>"
-})
-        </div>
+        
+        <!-- End Configuration Settings Section -->
+        
 "@
     }
 
     # Add recommendations section
     $html += @"
-        <div class="section">
+        <!-- Start Recommendations Section -->
+        <div class="section collapsible expanded">
             <h2 onclick="toggleSection(this)">💡 Recommendations & Action Items ▼</h2>
             <div class="section-content">
                 <div class="recommendations">
                     <h3>🎯 Priority Actions</h3>
                     <ul style="margin: 0; padding-left: 20px;">
-$(foreach ($rec in $healthScore.Recommendations) {
-    "                        <li style='margin: 10px 0; padding: 5px 0;'>💡 $rec</li>"
-})
-$(if ($securityAnalysis.Recommendations) {
-    foreach ($rec in $securityAnalysis.Recommendations) {
-        "                        <li style='margin: 10px 0; padding: 5px 0;'>🔒 $rec</li>"
+"@
+
+    # Add health score recommendations
+    if ($healthScore.Recommendations) {
+        foreach ($rec in $healthScore.Recommendations) {
+            $html += "                        <li style='margin: 10px 0; padding: 5px 0;'>💡 $rec</li>`n"
+        }
     }
-})
+
+    # Add settings-based recommendations from analysis
+    if ($Results.SettingsAnalysis -and $Results.SettingsAnalysis.Issues) {
+        $securityIssues = $Results.SettingsAnalysis.Issues | Where-Object { $_.Category -eq "Security" }
+        foreach ($issue in $securityIssues) {
+            $html += "                        <li style='margin: 10px 0; padding: 5px 0;'>🔒 Address security setting: $($issue.Message)</li>`n"
+        }
+    }
+
+    # Add default recommendations if none exist
+    if (-not $healthScore.Recommendations -and (-not $Results.SettingsAnalysis -or -not $Results.SettingsAnalysis.Issues -or @($Results.SettingsAnalysis.Issues | Where-Object { $_.Category -eq "Security" }).Count -eq 0)) {
+        $html += "                        <li style='margin: 10px 0; padding: 5px 0;'>✅ No critical issues detected - continue monitoring</li>`n"
+        $html += "                        <li style='margin: 10px 0; padding: 5px 0;'>📊 Review system performance regularly</li>`n"
+        $html += "                        <li style='margin: 10px 0; padding: 5px 0;'>🔒 Keep security settings up to date</li>`n"
+    }
+
+    $html += @"
                     </ul>
                     
                     <h3 style="margin-top: 25px;">📋 Next Steps</h3>
                     <div style="background: rgba(255,255,255,0.8); padding: 15px; border-radius: 8px; margin-top: 10px;">
                         <ol style="margin: 0; padding-left: 20px;">
-$(if ($healthScore.Issues.Critical -gt 0) {
-    "                            <li style='margin: 8px 0; color: #dc3545;'><strong>URGENT:</strong> Address all critical issues immediately</li>"
-})
-$(if ($healthScore.Issues.Error -gt 0) {
-    "                            <li style='margin: 8px 0; color: #dc3545;'>Resolve error-level issues within 24 hours</li>"
-})
-$(if ($healthScore.Issues.Warning -gt 0) {
-    "                            <li style='margin: 8px 0; color: #ffc107;'>Plan to address warning issues in next maintenance window</li>"
-})
+"@
+
+    # Add conditional next steps based on issues
+    if ($healthScore.Issues.Critical -gt 0) {
+        $html += "                            <li style='margin: 8px 0; color: #dc3545;'><strong>URGENT:</strong> Address all critical issues immediately</li>`n"
+    }
+    if ($healthScore.Issues.Error -gt 0) {
+        $html += "                            <li style='margin: 8px 0; color: #dc3545;'>Resolve error-level issues within 24 hours</li>`n"
+    }
+    if ($healthScore.Issues.Warning -gt 0) {
+        $html += "                            <li style='margin: 8px 0; color: #ffc107;'>Plan to address warning issues in next maintenance window</li>`n"
+    }
+
+    # Add standard next steps
+    $html += @"
                             <li style="margin: 8px 0; color: #17a2b8;">Schedule regular health checks and monitoring</li>
                             <li style="margin: 8px 0; color: #28a745;">Document any changes made for future reference</li>
                         </ol>
                     </div>
-                    
-                    $(if ($healthScore.OverallScore -lt 70) {
-                        "<div style='background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin-top: 15px;'>
-                            <h4 style='margin: 0 0 10px 0; color: #856404;'>⚠️ System Health Alert</h4>
-                            <p style='margin: 0; color: #856404;'>Your RocketChat instance requires attention. Consider engaging support team for assistance with critical issues.</p>
-                        </div>"
-                    })
+"@
+
+    # Add system health alert if score is low
+    if ($healthScore.OverallScore -lt 70) {
+        $html += @"
+                    <div style='background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin-top: 15px;'>
+                        <h4 style='margin: 0 0 10px 0; color: #856404;'>⚠️ System Health Alert</h4>
+                        <p style='margin: 0; color: #856404;'>Your RocketChat instance requires attention. Consider engaging support team for assistance with critical issues.</p>
+                    </div>
+"@
+    }
+
+    $html += @"
                 </div>
             </div>
         </div>
