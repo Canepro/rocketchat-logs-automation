@@ -1346,8 +1346,9 @@ $(foreach ($issue in $appsData.Issues) {
                 </div>
             </div>
         </div>
+"@
 
-        <!-- Start Configuration Settings Section -->
+        # Add Configuration Settings section (matches bash version structure)
         $html += @"
         <div class="section collapsible expanded">
             <h2 onclick="toggleSection(this)">⚙️ Configuration Settings ▼</h2>

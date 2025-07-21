@@ -1,0 +1,77 @@
+{
+  "insights": {
+    "trends": {},
+    "security": {
+      "Recommendations": null,
+      "ConfigurationReview": {},
+      "SecurityScore": 100,
+      "SecurityIssues": null
+    },
+    "performance": {
+      "MemoryAnalysis": {},
+      "MessageVolumeAnalysis": {},
+      "Recommendations": null,
+      "UserLoadAnalysis": {}
+    },
+    "errorPatterns": {}
+  },
+  "healthScore": {
+    "Issues": {
+      "Info": 0,
+      "Critical": 0,
+      "Warning": 0,
+      "Error": 0
+    },
+    "OverallScore": 100,
+    "Recommendations": "Excellent: System is running optimally",
+    "ComponentScores": {
+      "Performance": 100,
+      "Security": 100,
+      "Settings": 100,
+      "Logs": 100
+    }
+  },
+  "metadata": {
+    "dumpPath": "tests/fixtures/valid/standard-dump.json",
+    "generatedAt": "2025-07-21T16:56:24Z",
+    "reportType": "RocketChat Support Dump Analysis",
+    "version": "1.0.0"
+  },
+  "summary": {
+    "ErrorIssues": 0,
+    "InfoIssues": 0,
+    "TotalIssues": 0,
+    "CriticalIssues": 0,
+    "WarningIssues": 0
+  },
+  "analysis": {
+    "apps": {},
+    "settings": {
+      "Issues": null,
+      "Settings": {},
+      "PerformanceSettings": {},
+      "SecuritySettings": {}
+    },
+    "statistics": {
+      "Issues": null,
+      "ResourceUsage": {},
+      "PerformanceMetrics": {},
+      "ServerInfo": {}
+    },
+    "logs": {
+      "Issues": null,
+      "Patterns": {},
+      "TimeRange": {
+        "End": null,
+        "Start": null
+      },
+      "Summary": {
+        "TotalEntries": 1,
+        "InfoCount": 1,
+        "ErrorCount": 0,
+        "WarningCount": 0
+      }
+    },
+    "omnichannel": {}
+  }
+}
