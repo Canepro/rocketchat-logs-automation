@@ -1582,7 +1582,6 @@ $(foreach ($issue in $settingsData.Issues) {
                     </div>
                 </div>
             </div>
-        </div>
         
         <!-- End Configuration Settings Section -->
         
@@ -1695,7 +1694,6 @@ $(foreach ($issue in $settingsData.Issues) {
                     </ul>
                 </div>
             </div>
-        </div>
     </div>
 </body>
 </html>
