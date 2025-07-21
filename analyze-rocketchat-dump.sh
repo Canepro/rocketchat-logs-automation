@@ -197,7 +197,11 @@ find_dump_files() {
         log "VERBOSE" "DEBUG: Path is a directory, looking for files"
         # Directory - look for standard dump files
         DUMP_FILES[log]=$(find "$dump_path" -name "*log*.json" -type f | head -1)
-        DUMP_FILES[settings]=$(find "$dump_path" -name "*settings*.json" -type f | head -1)
+        # Prioritize main settings file over omnichannel-settings
+        DUMP_FILES[settings]=$(find "$dump_path" -name "*settings*.json" -not -name "*omnichannel*" -type f | head -1)
+        if [[ -z "${DUMP_FILES[settings]}" ]]; then
+            DUMP_FILES[settings]=$(find "$dump_path" -name "*settings*.json" -type f | head -1)
+        fi
         DUMP_FILES[statistics]=$(find "$dump_path" -name "*statistics*.json" -type f | head -1)
         DUMP_FILES[omnichannel]=$(find "$dump_path" -name "*omnichannel*.json" -type f | head -1)
         DUMP_FILES[apps]=$(find "$dump_path" -name "*apps*.json" -type f | head -1)
@@ -518,8 +522,22 @@ analyze_settings() {
         
     done < "$security_settings"
     
+    # Calculate category counts for Configuration Settings display
+    local security_count=0
+    local performance_count=0
+    
+    if [[ -f "$settings_file" ]]; then
+        # Count security-related settings
+        security_count=$(jq -r '.[] | select(._id | test("(password|auth|token|secret|ldap|saml|oauth|security|encryption|ssl|tls)"; "i")) | ._id' "$settings_file" 2>/dev/null | wc -l || echo "0")
+        
+        # Count performance-related settings  
+        performance_count=$(jq -r '.[] | select(._id | test("(cache|limit|timeout|max|pool|buffer|memory|cpu|performance|rate|throttle)"; "i")) | ._id' "$settings_file" 2>/dev/null | wc -l || echo "0")
+    fi
+    
     # Store results
     ANALYSIS_RESULTS[settings_total]=$total_settings
+    ANALYSIS_RESULTS[settings_security_count]=$security_count
+    ANALYSIS_RESULTS[settings_performance_count]=$performance_count
     ANALYSIS_RESULTS[settings_security_issues]=$security_issues
     ANALYSIS_RESULTS[settings_performance_issues]=$performance_issues
     ANALYSIS_RESULTS[settings_configuration_warnings]=$configuration_warnings
@@ -2547,15 +2565,18 @@ EOF
             
             # Parse and display security settings if settings file exists
             if [[ -f "${DUMP_FILES[settings]}" ]]; then
-                # Extract security-related settings from JSON
-                local security_keys="$(jq -r 'to_entries[] | select(.key | test("(password|auth|token|secret|ldap|saml|oauth|security|encryption|ssl|tls)"; "i")) | "\(.key)=\(.value)"' "${DUMP_FILES[settings]}" 2>/dev/null | head -20)"
+                # Extract security-related settings from JSON array, properly escaping values
+                local security_keys="$(jq -r '.[] | select(._id | test("(password|auth|token|secret|ldap|saml|oauth|security|encryption|ssl|tls)"; "i")) | "\(._id)|\(.value // "null")"' "${DUMP_FILES[settings]}" 2>/dev/null | head -20)"
                 
                 if [[ -n "$security_keys" ]]; then
-                    while IFS='=' read -r setting_name setting_value; do
+                    while IFS='|' read -r setting_name setting_value; do
                         [[ -z "$setting_name" ]] && continue
+                        # HTML escape the setting name and value
+                        setting_name="$(echo "$setting_name" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g')"
+                        setting_value="$(echo "$setting_value" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g')"
                         # Truncate long values
-                        if [[ ${#setting_value} -gt 50 ]]; then
-                            setting_value="${setting_value:0:47}..."
+                        if [[ ${#setting_value} -gt 100 ]]; then
+                            setting_value="${setting_value:0:97}..."
                         fi
                         # Handle null values
                         if [[ "$setting_value" == "null" || -z "$setting_value" ]]; then
@@ -2605,14 +2626,17 @@ EOF
             
             # Parse and display performance settings
             if [[ -f "${DUMP_FILES[settings]}" ]]; then
-                local performance_keys="$(jq -r 'to_entries[] | select(.key | test("(cache|limit|timeout|max|pool|buffer|memory|cpu|performance|rate|throttle)"; "i")) | "\(.key)=\(.value)"' "${DUMP_FILES[settings]}" 2>/dev/null | head -20)"
+                local performance_keys="$(jq -r '.[] | select(._id | test("(cache|limit|timeout|max|pool|buffer|memory|cpu|performance|rate|throttle)"; "i")) | "\(._id)|\(.value // "null")"' "${DUMP_FILES[settings]}" 2>/dev/null | head -20)"
                 
                 if [[ -n "$performance_keys" ]]; then
-                    while IFS='=' read -r setting_name setting_value; do
+                    while IFS='|' read -r setting_name setting_value; do
                         [[ -z "$setting_name" ]] && continue
+                        # HTML escape the setting name and value
+                        setting_name="$(echo "$setting_name" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g')"
+                        setting_value="$(echo "$setting_value" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g')"
                         # Truncate long values
-                        if [[ ${#setting_value} -gt 50 ]]; then
-                            setting_value="${setting_value:0:47}..."
+                        if [[ ${#setting_value} -gt 100 ]]; then
+                            setting_value="${setting_value:0:97}..."
                         fi
                         # Handle null values
                         if [[ "$setting_value" == "null" || -z "$setting_value" ]]; then
@@ -2670,8 +2694,11 @@ EOF
                     "Push") category_pattern="(push|notification)" ;;
                 esac
                 
-                local category_settings="$(jq -r "to_entries[] | select(.key | test(\"$category_pattern\"; \"i\")) | \"\(.key)=\(.value)\"" "${DUMP_FILES[settings]}" 2>/dev/null | head -15)"
-                local settings_count="$(echo "$category_settings" | grep -c . 2>/dev/null || echo "0")"
+                local category_settings="$(jq -r ".[] | select(._id | test(\"$category_pattern\"; \"i\")) | \"\(._id)|\(.value // \"null\")\"" "${DUMP_FILES[settings]}" 2>/dev/null | head -15)"
+                local settings_count="$(echo "$category_settings" | wc -l 2>/dev/null || echo "0")"
+                if [[ -z "$category_settings" ]]; then
+                    settings_count=0
+                fi
                 
                 if [[ $settings_count -gt 0 ]]; then
                     local category_icon
@@ -2702,21 +2729,26 @@ EOF
                                 <div id="$category_id" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
 EOF
                     
-                    while IFS='=' read -r setting_name setting_value; do
+                    while IFS='|' read -r setting_name setting_value; do
                         [[ -z "$setting_name" ]] && continue
-                        # Truncate long values
-                        if [[ ${#setting_value} -gt 50 ]]; then
-                            setting_value="${setting_value:0:47}..."
+                        
+                        # HTML escape the setting name and value
+                        local escaped_name="$(echo "$setting_name" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g')"
+                        local escaped_value="$(echo "$setting_value" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&#39;/g')"
+                        
+                        # Truncate long values after escaping
+                        if [[ ${#escaped_value} -gt 50 ]]; then
+                            escaped_value="${escaped_value:0:47}..."
                         fi
                         # Handle null values
-                        if [[ "$setting_value" == "null" || -z "$setting_value" ]]; then
-                            setting_value="<em style='color: #6c757d;'>null</em>"
+                        if [[ "$escaped_value" == "null" || -z "$escaped_value" ]]; then
+                            escaped_value="<em style='color: #6c757d;'>null</em>"
                         fi
                         
                         cat << EOF
                                     <div style="border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;">
-                                        <div style="font-weight: bold; color: #495057; word-break: break-word;">$setting_name</div>
-                                        <div style="color: #6c757d; margin-top: 2px; word-break: break-all;">$setting_value</div>
+                                        <div style="font-weight: bold; color: #495057; word-break: break-word;">$escaped_name</div>
+                                        <div style="color: #6c757d; margin-top: 2px; word-break: break-all;">$escaped_value</div>
                                     </div>
 EOF
                     done <<< "$category_settings"
@@ -2735,14 +2767,22 @@ EOF
                     </div>
                 </div>
             </div>
+        </section>
 EOF
     fi
+    
+    # DEBUG: Add clear separation between Configuration Settings and next section
+    cat << EOF
+        <!-- END Configuration Settings Section -->
+        
+EOF
     # Add enhanced Recommendations section
     local total_issues=$((${ANALYSIS_RESULTS[log_error_count]:-0} + ${ANALYSIS_RESULTS[settings_security_issues]:-0} + ${ANALYSIS_RESULTS[settings_performance_issues]:-0}))
     local health_score=${HEALTH_SCORE[overall]:-75}
     
     cat << EOF
-            <!-- Enhanced Recommendations & Action Items Section -->
+        <!-- START Enhanced Recommendations & Action Items Section -->
+        <section class="main-section">
             <div class="section">
                 <h2 onclick="toggleSection(this)">💡 Recommendations & Action Items ▼</h2>
                 <div class="section-content">
@@ -2840,6 +2880,9 @@ EOF
                     </div>
                 </div>
             </div>
+        </section>
+        <!-- END Recommendations Section -->
+        
 EOF
     
     # Add Analysis Summary & Technical Details section

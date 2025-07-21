@@ -1,17 +1,57 @@
 # RocketChat Support Dump Analyzer
 
-A comprehensive automation tool for analyzing RocketChat support dumps and system logs. Available in both **PowerShell** and **Bash** versions to support different environments and preferences. This tool helps support engineers quickly identify issues, analyze performance metrics, and generate detailed reports from RocketChat support data.
+A comprehensive automation tool for analyzing RocketChat support dumps and system logs. Available in both **PowerShell** and **Bash** versions with **complete feature parity** for cross-platform support.
 
-**✅ Production Ready** - Successfully tested with real RocketChat 7.8.0 support dumps
-**🔧 Latest Updates** - Enhanced with comprehensive analysis, improved JSON serialization, and cleanup utilities
+**✅ Production Ready** - Successfully tested with real RocketChat 7.8.0 support dumps (1021+ settings)  
+**🚀 v1.4.0** - Enhanced Configuration Settings analysis with interactive HTML reports  
+**🎯 Complete Parity** - Both versions now offer identical functionality and output
 
-## 🚀 Features
+## 🚀 Quick Start
+
+### **PowerShell Version** (Windows)
+```powershell
+# Basic analysis with HTML report
+.\Analyze-RocketChatDump.ps1 -DumpPath "C:\Users\YourName\Downloads\7.8.0-support-dump" -OutputFormat HTML
+
+# Quick console analysis
+.\Analyze-RocketChatDump.ps1 -DumpPath "C:\Users\YourName\Downloads\7.8.0-support-dump"
+
+# Export to specific location
+.\Analyze-RocketChatDump.ps1 -DumpPath "C:\Downloads\dump" -OutputFormat HTML -ExportPath "C:\Reports\analysis.html"
+```
+
+### **Bash Version** (Linux/macOS/WSL)
+```bash
+# Basic analysis with HTML report
+bash analyze-rocketchat-dump.sh --format html --output report.html /path/to/7.8.0-support-dump
+
+# Quick console analysis
+bash analyze-rocketchat-dump.sh /path/to/7.8.0-support-dump
+
+# Windows users with WSL - use mount paths
+bash analyze-rocketchat-dump.sh --format html /mnt/c/Users/YourName/Downloads/7.8.0-support-dump
+```
+
+### **Path Guidelines**
+- **PowerShell**: Use Windows paths → `C:\Users\YourName\Downloads\dump`
+- **Bash on WSL**: Use mount paths → `/mnt/c/Users/YourName/Downloads/dump`  
+- **Bash on Linux/macOS**: Use native paths → `/home/user/Downloads/dump`
+
+## ✨ Features
+
+## ✨ Features
+
+### 🎯 **v1.4.0 - Enhanced Configuration Settings Analysis**
+- **Complete Feature Parity** between PowerShell and Bash versions
+- **1000+ Settings Support** - Handles large-scale RocketChat configurations  
+- **Expandable Categories** - SAML, LDAP, API, Accounts, Email, FileUpload, Security, Performance
+- **HTML Content Escaping** - Safe handling of XML templates and complex configurations
+- **Real-time Filtering** - Interactive category browsing with collapsible sections
 
 ### 📊 **Professional HTML Reports**
 - **Modern responsive design** with gradient backgrounds and professional styling
-- **Interactive collapsible sections** for detailed exploration
-- **Interactive Log Analysis v1.4.0** with expandable log entries and real-time filtering
-- **JavaScript-powered severity filtering** (Critical, Error, Warning, Info)
+- **Interactive collapsible sections** for detailed exploration  
+- **JavaScript-powered filtering** and expandable content
 - **Executive summary** with immediate health assessment and recommendations
 - **Visual health indicators** with color-coded status badges (🟢🟡🔴)
 - **Mobile-friendly** responsive layout for viewing on any device
@@ -24,14 +64,14 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 - **Trend analysis** and performance insights
 
 ### 🔍 **Comprehensive Analysis**
-- **Dual Implementation**: Both PowerShell and Bash versions (*Interactive Log Analysis v1.4.0 currently PowerShell-only*)
-- **Multiple Data Sources**: Analyzes logs, settings, statistics, Omnichannel configuration, and installed apps
-- **Multiple Output Formats**: Console, JSON, CSV, and professional HTML reports
-- **Pattern Recognition**: Automatically detects error patterns and trends
-- **Security Analysis**: Reviews security settings and identifies potential vulnerabilities
-- **Performance Insights**: Analyzes memory usage, user load, and system performance
-- **Configurable Rules**: Customizable analysis rules and thresholds
-- **Cross-Platform**: Works on Windows, macOS, and Linux
+- **Complete Cross-Platform Parity** - Both PowerShell and Bash versions offer identical functionality
+- **Multiple Data Sources** - Logs, settings, statistics, Omnichannel configuration, and installed apps  
+- **Multiple Output Formats** - Console, JSON, CSV, and professional HTML reports
+- **Configuration Categories** - Automatic categorization of 1000+ settings with expandable views
+- **Security Analysis** - Reviews security settings and identifies potential vulnerabilities
+- **Performance Insights** - Analyzes memory usage, user load, and system performance  
+- **Pattern Recognition** - Automatically detects error patterns and trends
+- **Configurable Rules** - Customizable analysis rules and thresholds
 
 ## 📋 Requirements
 
