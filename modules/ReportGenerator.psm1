@@ -1429,16 +1429,16 @@ $(foreach ($issue in $settingsData.Issues) {
 
         # Add Security Settings Category
         if ($settingsData.SecuritySettings -and $securitySettingsCount -gt 0) {
-            $html += @"
-                        <div style="border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            <div style="background: linear-gradient(90deg, #dc3545, #c82333); color: white; padding: 15px; cursor: pointer;" onclick="toggleSettingsCategory('security-settings')">
-                                <h4 style="margin: 0; display: flex; align-items: center; gap: 8px;">
-                                    <span>🔒</span> Security Settings ($securitySettingsCount)
-                                    <span style="margin-left: auto;">▼</span>
-                                </h4>
-                            </div>
-                            <div id="security-settings" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
-"@
+            # Build Security Settings HTML without nested here-strings
+            $securityHtml = ""
+            $securityHtml += "                        <div style=`"border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);`">`n"
+            $securityHtml += "                            <div style=`"background: linear-gradient(90deg, #dc3545, #c82333); color: white; padding: 15px; cursor: pointer;`" onclick=`"toggleSettingsCategory('security-settings')`">`n"
+            $securityHtml += "                                <h4 style=`"margin: 0; display: flex; align-items: center; gap: 8px;`">`n"
+            $securityHtml += "                                    <span>🔒</span> Security Settings ($securitySettingsCount)`n"
+            $securityHtml += "                                    <span style=`"margin-left: auto;`">▼</span>`n"
+            $securityHtml += "                                </h4>`n"
+            $securityHtml += "                            </div>`n"
+            $securityHtml += "                            <div id=`"security-settings`" style=`"display: none; padding: 15px; max-height: 300px; overflow-y: auto;`">`n"
             
             # Add each security setting
             foreach ($setting in (@($settingsData.SecuritySettings.Keys) | Sort-Object)) {
@@ -1451,38 +1451,31 @@ $(foreach ($issue in $settingsData.Issues) {
                 } else { 
                     $settingValue 
                 }
-                $html += @"
-                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>
-                                    <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>
-                                    <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>
-                                </div>
-"@
+                $securityHtml += "                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>`n"
+                $securityHtml += "                                    <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>`n"
+                $securityHtml += "                                    <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>`n"
+                $securityHtml += "                                </div>`n"
             }
             
-            $html += @"
-                            </div>
-                        </div>
-"@ 
-    } else { 
+            $securityHtml += "                            </div>`n"
+            $securityHtml += "                        </div>`n"
             
-            $html += @"
-                            </div>
-                        </div>
-"@
+            # Add the complete security settings HTML to main HTML
+            $html += $securityHtml
         }
 
         # Add Performance Settings Category
         if ($settingsData.PerformanceSettings -and $performanceSettingsCount -gt 0) {
-            $html += @"
-                        <div style="border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            <div style="background: linear-gradient(90deg, #28a745, #218838); color: white; padding: 15px; cursor: pointer;" onclick="toggleSettingsCategory('performance-settings')">
-                                <h4 style="margin: 0; display: flex; align-items: center; gap: 8px;">
-                                    <span>⚡</span> Performance Settings ($performanceSettingsCount)
-                                    <span style="margin-left: auto;">▼</span>
-                                </h4>
-                            </div>
-                            <div id="performance-settings" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
-"@
+            # Build Performance Settings HTML without nested here-strings
+            $performanceHtml = ""
+            $performanceHtml += "                        <div style=`"border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);`">`n"
+            $performanceHtml += "                            <div style=`"background: linear-gradient(90deg, #28a745, #218838); color: white; padding: 15px; cursor: pointer;`" onclick=`"toggleSettingsCategory('performance-settings')`">`n"
+            $performanceHtml += "                                <h4 style=`"margin: 0; display: flex; align-items: center; gap: 8px;`">`n"
+            $performanceHtml += "                                    <span>⚡</span> Performance Settings ($performanceSettingsCount)`n"
+            $performanceHtml += "                                    <span style=`"margin-left: auto;`">▼</span>`n"
+            $performanceHtml += "                                </h4>`n"
+            $performanceHtml += "                            </div>`n"
+            $performanceHtml += "                            <div id=`"performance-settings`" style=`"display: none; padding: 15px; max-height: 300px; overflow-y: auto;`">`n"
             
             # Add each performance setting
             foreach ($setting in (@($settingsData.PerformanceSettings.Keys) | Sort-Object)) {
@@ -1495,18 +1488,17 @@ $(foreach ($issue in $settingsData.Issues) {
                 } else { 
                     $settingValue 
                 }
-                $html += @"
-                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>
-                                    <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>
-                                    <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>
-                                </div>
-"@
+                $performanceHtml += "                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>`n"
+                $performanceHtml += "                                    <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>`n"
+                $performanceHtml += "                                    <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>`n"
+                $performanceHtml += "                                </div>`n"
             }
             
-            $html += @"
-                            </div>
-                        </div>
-"@
+            $performanceHtml += "                            </div>`n"
+            $performanceHtml += "                        </div>`n"
+            
+            # Add the complete performance settings HTML to main HTML
+            $html += $performanceHtml
         }
 
         # Group general settings by category and add them
@@ -1544,16 +1536,16 @@ $(foreach ($issue in $settingsData.Issues) {
                     default { "⚙️" }
                 }
 
-                # Build category HTML - do not use here-strings inside the main here-string
-                $categoryHtml = ""
-                $categoryHtml += "                        <div style=`"border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);`">`n"
-                $categoryHtml += "                            <div style=`"background: linear-gradient(90deg, #007acc, #0056b3); color: white; padding: 15px; cursor: pointer;`" onclick=`"toggleSettingsCategory('$categoryId')`">`n"
-                $categoryHtml += "                                <h4 style=`"margin: 0; display: flex; align-items: center; gap: 8px;`">`n"
-                $categoryHtml += "                                    <span>$categoryIcon</span> $categoryName Settings ($categoryCount)`n"
-                $categoryHtml += "                                    <span style=`"margin-left: auto;`">▼</span>`n"
-                $categoryHtml += "                                </h4>`n"
-                $categoryHtml += "                            </div>`n"
-                $categoryHtml += "                            <div id=`"$categoryId`" style=`"display: none; padding: 15px; max-height: 300px; overflow-y: auto;`">`n"
+                $html += @"
+                        <div style="border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="background: linear-gradient(90deg, #007acc, #0056b3); color: white; padding: 15px; cursor: pointer;" onclick="toggleSettingsCategory('$categoryId')">
+                                <h4 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                                    <span>$categoryIcon</span> $categoryName Settings ($categoryCount)
+                                    <span style="margin-left: auto;">▼</span>
+                                </h4>
+                            </div>
+                            <div id="$categoryId" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
+"@
                 
                 # Add settings for this category
                 foreach ($settingName in ($categorySettings | Sort-Object)) {
@@ -1565,17 +1557,18 @@ $(foreach ($issue in $settingsData.Issues) {
                     } else { 
                         $settingValue 
                     }
-                    $categoryHtml += "                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>`n"
-                    $categoryHtml += "                                    <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>`n"
-                    $categoryHtml += "                                    <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>`n"
-                    $categoryHtml += "                                </div>`n"
+                    $html += @"
+                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>
+                                    <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>
+                                    <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>
+                                </div>
+"@
                 }
                 
-                $categoryHtml += "                            </div>`n"
-                $categoryHtml += "                        </div>`n"
-                
-                # Add the complete category HTML to the main HTML
-                $html += $categoryHtml
+                $html += @"
+                            </div>
+                        </div>
+"@
             }
         }
 
@@ -1706,3 +1699,4 @@ $(foreach ($issue in $settingsData.Issues) {
 }
 
 Export-ModuleMember -Function Write-ConsoleReport, New-JSONReport, New-CSVReport, New-HTMLReport
+
