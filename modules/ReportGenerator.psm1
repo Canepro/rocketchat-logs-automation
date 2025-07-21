@@ -634,6 +634,43 @@ function New-HTMLReport {
         }
         td { border-bottom: 1px solid #dee2e6; }
         
+        /* CSS for the unified settings table (to match Bash version) */
+        .settings-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .settings-table th, .settings-table td { 
+            padding: 12px 15px; 
+            text-align: left; 
+            border-bottom: 1px solid #dee2e6;
+            word-break: break-all;
+        }
+        .settings-table th { 
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        .settings-table tr:last-child td {
+            border-bottom: none;
+        }
+        .settings-table tr:hover {
+            background-color: #f1f1f1;
+        }
+        .settings-table .category-header td {
+            background: #007acc;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1em;
+            border-top: 2px solid white;
+        }
+        .settings-table .category-header:first-child td {
+            border-top: none;
+        }
+        
         /* Premium recommendations section */
         .recommendations { 
             background: linear-gradient(135deg, #e7f3ff, #d4edda); 
@@ -1348,10 +1385,17 @@ $(foreach ($issue in $appsData.Issues) {
         </div>
 "@
 
-    # Add Configuration Settings Section
-    $html += @"
+    # Add Configuration Settings Section (Replicated from Bash Version)
+    if ($Results.SettingsAnalysis) {
+        $settingsData = $Results.SettingsAnalysis
+        $totalSettings = 0
+        $securitySettingsCount = if ($settingsData.SecuritySettings) { @($settingsData.SecuritySettings.Keys).Count } else { 0 }
+        $performanceSettingsCount = if ($settingsData.PerformanceSettings) { @($settingsData.PerformanceSettings.Keys).Count } else { 0 }
+        $generalSettingsCount = if ($settingsData.Settings) { @($settingsData.Settings.Keys).Count } else { 0 }
+        $totalSettings = $securitySettingsCount + $performanceSettingsCount + $generalSettingsCount
+        $issuesCount = if ($settingsData.Issues) { $settingsData.Issues.Count } else { 0 }
 
-        <!-- Start Configuration Settings Section -->
+        $html += @"
         <div class="section collapsible expanded">
             <h2 onclick="toggleSection(this)">⚙️ Configuration Settings ▼</h2>
             <div class="section-content">
@@ -1393,200 +1437,86 @@ $(foreach ($issue in $appsData.Issues) {
                         </div>
                     </div>
                 </div>
-
-$(if ($issuesCount -gt 0) {
-"                <h3 style='color: #ffc107; display: flex; align-items: center; gap: 8px;'>
+"@
+        if ($issuesCount -gt 0) {
+            $html += @"
+                <h3 style='color: #ffc107; display: flex; align-items: center; gap: 8px; margin-top: 30px;'>
                     <span>⚠️</span> Configuration Issues Found
                 </h3>
                 <ul class='issue-list'>
-$(foreach ($issue in $settingsData.Issues) {
-    $cssClass = "issue-" + $issue.Severity.ToLower()
-    $icon = switch ($issue.Severity) {
-        "Critical" { "🚨" }
-        "Error" { "❌" }
-        "Warning" { "⚠️" }
-        default { "ℹ️" }
-    }
-    "                <li class='issue-item $cssClass'>
-                    <div style='display: flex; align-items: center; gap: 10px;'>
-                        <span style='font-size: 1.2em;'>$icon</span>
-                        <div>
-                            <strong>[$($issue.Severity)]</strong> $($issue.Message)
-                            $(if ($issue.Setting) { "<br><small style='color: #6c757d;'>⚙️ Setting: $($issue.Setting)</small>" })
-                        </div>
-                    </div>
-                </li>"
-})
-                </ul>"
-})
-
-                <div style="margin-top: 30px;">
-                    <h3 style="display: flex; align-items: center; gap: 8px; color: #495057;">
-                        <span>📁</span> Settings Categories
-                    </h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0;">
 "@
-
-        # Add Security Settings Category
-        if ($settingsData.SecuritySettings -and $securitySettingsCount -gt 0) {
-            # Build Security Settings HTML without nested here-strings
-            $securityHtml = ""
-            $securityHtml += "                        <div style=`"border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);`">`n"
-            $securityHtml += "                            <div style=`"background: linear-gradient(90deg, #dc3545, #c82333); color: white; padding: 15px; cursor: pointer;`" onclick=`"toggleSettingsCategory('security-settings')`">`n"
-            $securityHtml += "                                <h4 style=`"margin: 0; display: flex; align-items: center; gap: 8px;`">`n"
-            $securityHtml += "                                    <span>🔒</span> Security Settings ($securitySettingsCount)`n"
-            $securityHtml += "                                    <span style=`"margin-left: auto;`">▼</span>`n"
-            $securityHtml += "                                </h4>`n"
-            $securityHtml += "                            </div>`n"
-            $securityHtml += "                            <div id=`"security-settings`" style=`"display: none; padding: 15px; max-height: 300px; overflow-y: auto;`">`n"
-            
-            # Add each security setting
-            foreach ($setting in (@($settingsData.SecuritySettings.Keys) | Sort-Object)) {
-                $settingName = $setting
-                $settingValue = $settingsData.SecuritySettings[$settingName]
-                $displayValue = if ($settingValue -is [string] -and $settingValue.Length -gt 50) { 
-                    $settingValue.Substring(0, 47) + "..." 
-                } elseif ($null -eq $settingValue) { 
-                    "<em style='color: #6c757d;'>null</em>" 
-                } else { 
-                    $settingValue 
+            foreach ($issue in $settingsData.Issues) {
+                $cssClass = "issue-" + $issue.Severity.ToLower()
+                $icon = switch ($issue.Severity) {
+                    "Critical" { "🚨" }
+                    "Error"    { "❌" }
+                    "Warning"  { "⚠️" }
+                    default    { "ℹ️" }
                 }
-                $securityHtml += "                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>`n"
-                $securityHtml += "                                    <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>`n"
-                $securityHtml += "                                    <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>`n"
-                $securityHtml += "                                </div>`n"
+                $html += "                <li class='issue-item $cssClass'><div style='display: flex; align-items: center; gap: 10px;'><span style='font-size: 1.2em;'>$icon</span><div><strong>[$($issue.Severity)]</strong> $($issue.Message)$(if ($issue.Setting) { ""`n<br><small style='color: #6c757d;'>⚙️ Setting: $($issue.Setting)</small>"" })</div></div></li>`n"
             }
-            
-            $securityHtml += "                            </div>`n"
-            $securityHtml += "                        </div>`n"
-            
-            # Add the complete security settings HTML to main HTML
-            $html += $securityHtml
+            $html += "                </ul>"
         }
 
-        # Add Performance Settings Category
-        if ($settingsData.PerformanceSettings -and $performanceSettingsCount -gt 0) {
-            # Build Performance Settings HTML without nested here-strings
-            $performanceHtml = ""
-            $performanceHtml += "                        <div style=`"border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);`">`n"
-            $performanceHtml += "                            <div style=`"background: linear-gradient(90deg, #28a745, #218838); color: white; padding: 15px; cursor: pointer;`" onclick=`"toggleSettingsCategory('performance-settings')`">`n"
-            $performanceHtml += "                                <h4 style=`"margin: 0; display: flex; align-items: center; gap: 8px;`">`n"
-            $performanceHtml += "                                    <span>⚡</span> Performance Settings ($performanceSettingsCount)`n"
-            $performanceHtml += "                                    <span style=`"margin-left: auto;`">▼</span>`n"
-            $performanceHtml += "                                </h4>`n"
-            $performanceHtml += "                            </div>`n"
-            $performanceHtml += "                            <div id=`"performance-settings`" style=`"display: none; padding: 15px; max-height: 300px; overflow-y: auto;`">`n"
-            
-            # Add each performance setting
-            foreach ($setting in (@($settingsData.PerformanceSettings.Keys) | Sort-Object)) {
-                $settingName = $setting
-                $settingValue = $settingsData.PerformanceSettings[$settingName]
-                $displayValue = if ($settingValue -is [string] -and $settingValue.Length -gt 50) { 
-                    $settingValue.Substring(0, 47) + "..." 
-                } elseif ($null -eq $settingValue) { 
-                    "<em style='color: #6c757d;'>null</em>" 
-                } else { 
-                    $settingValue 
-                }
-                $performanceHtml += "                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>`n"
-                $performanceHtml += "                                    <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>`n"
-                $performanceHtml += "                                    <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>`n"
-                $performanceHtml += "                                </div>`n"
-            }
-            
-            $performanceHtml += "                            </div>`n"
-            $performanceHtml += "                        </div>`n"
-            
-            # Add the complete performance settings HTML to main HTML
-            $html += $performanceHtml
-        }
-
-        # Group general settings by category and add them
-        if ($settingsData.Settings -and $generalSettingsCount -gt 0) {
-            # Group settings by prefix
-            $settingGroups = @{}
+        # --- UNIFIED SETTINGS TABLE ---
+        $html += @"
+                <h3 style='display: flex; align-items: center; gap: 8px; margin-top: 30px;'>
+                    <span>📁</span> Settings Details
+                </h3>
+                <table class='settings-table'>
+                    <thead>
+                        <tr>
+                            <th>Setting</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+"@
+        
+        # Consolidate all settings into one list with categories
+        $allSettings = @()
+        if ($settingsData.SecuritySettings) { $settingsData.SecuritySettings.GetEnumerator() | ForEach-Object { $allSettings += [PSCustomObject]@{ Category = 'Security'; Name = $_.Name; Value = $_.Value } } }
+        if ($settingsData.PerformanceSettings) { $settingsData.PerformanceSettings.GetEnumerator() | ForEach-Object { $allSettings += [PSCustomObject]@{ Category = 'Performance'; Name = $_.Name; Value = $_.Value } } }
+        if ($settingsData.Settings) { 
             @($settingsData.Settings.Keys) | ForEach-Object {
                 $settingName = $_
                 $prefix = if ($settingName -match '^([^_]+)_') { $matches[1] } else { "General" }
-                if (-not $settingGroups.ContainsKey($prefix)) {
-                    $settingGroups[$prefix] = @()
-                }
-                $settingGroups[$prefix] += $settingName
+                $allSettings += [PSCustomObject]@{ Category = $prefix; Name = $settingName; Value = $settingsData.Settings[$settingName] }
+            }
+        }
+        
+        $sortedSettings = $allSettings | Sort-Object Category, Name
+        $currentCategory = ""
+        
+        foreach ($setting in $sortedSettings) {
+            if ($setting.Category -ne $currentCategory) {
+                $currentCategory = $setting.Category
+                $html += "                        <tr class='category-header'><td colspan='2'>$currentCategory</td></tr>`n"
+            }
+            
+            $displayValue = if ($null -eq $setting.Value) { 
+                "<em style='color: #6c757d;'>null</em>" 
+            } elseif ($setting.Value -is [bool]) {
+                $setting.Value.ToString().ToLower()
+            } else { 
+                $setting.Value 
             }
 
-            # Display top 6 categories
-            $topCategories = $settingGroups.GetEnumerator() | Sort-Object { $_.Value.Count } -Descending | Select-Object -First 6
-            foreach ($category in $topCategories) {
-                $categoryName = $category.Key
-                $categorySettings = $category.Value
-                $categoryCount = $categorySettings.Count
-                $categoryId = "general-$($categoryName.ToLower())-settings"
-                
-                $categoryIcon = switch ($categoryName) {
-                    "Accounts" { "👤" }
-                    "LDAP" { "🔐" }
-                    "SAML" { "🔑" }
-                    "FileUpload" { "📁" }
-                    "Email" { "📧" }
-                    "Omnichannel" { "💬" }
-                    "Message" { "💭" }
-                    "Layout" { "🎨" }
-                    "API" { "🔌" }
-                    "Push" { "📱" }
-                    default { "⚙️" }
-                }
-
-                $html += @"
-                        <div style="border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            <div style="background: linear-gradient(90deg, #007acc, #0056b3); color: white; padding: 15px; cursor: pointer;" onclick="toggleSettingsCategory('$categoryId')">
-                                <h4 style="margin: 0; display: flex; align-items: center; gap: 8px;">
-                                    <span>$categoryIcon</span> $categoryName Settings ($categoryCount)
-                                    <span style="margin-left: auto;">▼</span>
-                                </h4>
-                            </div>
-                            <div id="$categoryId" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
-"@
-                
-                # Add settings for this category
-                foreach ($settingName in ($categorySettings | Sort-Object)) {
-                    $settingValue = $settingsData.Settings.$settingName
-                    $displayValue = if ($settingValue -is [string] -and $settingValue.Length -gt 50) { 
-                        $settingValue.Substring(0, 47) + "..." 
-                    } elseif ($null -eq $settingValue) { 
-                        "<em style='color: #6c757d;'>null</em>" 
-                    } else { 
-                        $settingValue 
-                    }
-                    $html += @"
-                                <div style='border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;'>
-                                    <div style='font-weight: bold; color: #495057; word-break: break-word;'>$settingName</div>
-                                    <div style='color: #6c757d; margin-top: 2px; word-break: break-all;'>$displayValue</div>
-                                </div>
-"@
-                }
-                
-                $html += @"
-                            </div>
-                        </div>
-"@
-            }
+            $html += "                        <tr><td>$($setting.Name)</td><td>$displayValue</td></tr>`n"
         }
 
         $html += @"
-                    </div>
-                </div>
+                    </tbody>
+                </table>
             </div>
         </div>
-        
-        <!-- End Configuration Settings Section -->
-        
 "@
     }
 
     # Add recommendations section
     $html += @"
         <!-- Start Recommendations Section -->
-        <div class="section collapsible expanded">
+        <div class="section collapsible expanded" style="margin-top: 25px;">
             <h2 onclick="toggleSection(this)">💡 Recommendations & Action Items ▼</h2>
             <div class="section-content">
                 <div class="recommendations">
@@ -1658,7 +1588,7 @@ $(foreach ($issue in $settingsData.Issues) {
             </div>
         </div>
         
-        <div class="section">
+        <div class="section" style="margin-top: 25px;">
             <h2 onclick="toggleSection(this)">📋 Analysis Summary & Technical Details ▶</h2>
             <div class="section-content" style="display: none;">
                 <div class="stats-grid">
@@ -1699,4 +1629,5 @@ $(foreach ($issue in $settingsData.Issues) {
 }
 
 Export-ModuleMember -Function Write-ConsoleReport, New-JSONReport, New-CSVReport, New-HTMLReport
+
 

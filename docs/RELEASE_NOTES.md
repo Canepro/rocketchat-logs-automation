@@ -1,52 +1,5 @@
 # 📋 Release Notes - RocketChat Support Dump Analyzer
 
-## 🚀 v1.4.1 - Critical PowerShell HTML Generation Fixes (July 21, 2025)
-
-### 🔥 **CRITICAL FIXES - PowerShell HTML Reports**
-
-#### **🐛 Issues Resolved**
-- **🔧 FIXED: Duplicate HTML Generation** - PowerShell was generating 2 complete HTML documents instead of 1
-- **🔧 FIXED: Wrong Section Placement** - Recommendations and Analysis Summary sections were incorrectly nested within Configuration Settings
-- **🔧 FIXED: File Size Bloat** - Reports reduced from ~56KB to ~46KB (18% optimization)
-- **🔧 FIXED: Module Import Conflicts** - Removed problematic `-Global` flag causing loading issues
-
-#### **🎯 Root Cause & Solution**
-**Problem**: Missing here-string closure (`"@`) in Configuration Analysis section caused:
-- Raw HTML comments to be output directly
-- PowerShell to start a new HTML document generation
-- Malformed section structure with incorrect nesting
-
-**Solution**: Added proper here-string closure and cleaned up section boundaries:
-```powershell
-# Before (BROKEN):
-        </div>
-
-        <!-- Start Configuration Settings Section -->  # Raw output!
-        $html += @"
-
-# After (FIXED):
-        </div>
-"@
-
-    # Add Configuration Settings Section  
-    $html += @"
-        <!-- Start Configuration Settings Section -->
-```
-
-#### **🧪 Verification Results**
-- ✅ **HTML Documents**: 1 (was 2)
-- ✅ **File Size**: 46,005 bytes (was ~56,000)
-- ✅ **Section Structure**: All 6 sections properly placed as top-level
-- ✅ **PowerShell-Bash Parity**: Complete structural matching achieved
-
-#### **📊 Impact**
-- **PowerShell HTML reports are now production-ready**
-- **Users can confidently use PowerShell version as bash alternative**
-- **No more "disaster" appearance from duplicate content**
-- **Professional, clean reports that meet quality standards**
-
----
-
 ## 🚀 v1.4.0 - Complete Cross-Platform Feature Parity (July 21, 2025)
 
 ### 🎉 **Major Milestone: 100% Feature Parity Achieved**
