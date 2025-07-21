@@ -81,8 +81,8 @@ $psOutputPath = "powershell-test-$timestamp.html"
 $psStartTime = Get-Date
 
 try {
-    Write-Host "Running: .\Analyze-RocketChatDump.ps1 -DumpPath `"$DumpPath`" -OutputFormat HTML -ExportPath `"$psOutputPath`""
-    & ".\Analyze-RocketChatDump.ps1" -DumpPath $DumpPath -OutputFormat HTML -ExportPath $psOutputPath -ErrorAction Stop
+    Write-Host "Running: .\scripts\Analyze-RocketChatDump.ps1 -DumpPath `"$DumpPath`" -OutputFormat HTML -ExportPath `"$psOutputPath`""
+    & ".\scripts\Analyze-RocketChatDump.ps1" -DumpPath $DumpPath -OutputFormat HTML -ExportPath $psOutputPath -ErrorAction Stop
     $psEndTime = Get-Date
     $psDuration = ($psEndTime - $psStartTime).TotalSeconds
     
@@ -109,8 +109,8 @@ $bashStartTime = Get-Date
 
 # Try different bash environments
 $bashCommands = @(
-    "wsl bash ./analyze-rocketchat-dump.sh --format html --output `"$bashOutputPath`" `"/mnt/c/Users/i/Downloads/$dumpName`"",
-    "bash ./analyze-rocketchat-dump.sh --format html --output `"$bashOutputPath`" `"$DumpPath`""
+    "wsl bash ./scripts/analyze-rocketchat-dump.sh --format html --output `"$bashOutputPath`" `"/mnt/c/Users/i/Downloads/$dumpName`"",
+    "bash ./scripts/analyze-rocketchat-dump.sh --format html --output `"$bashOutputPath`" `"$DumpPath`""
 )
 
 $bashSuccess = $false
@@ -122,10 +122,10 @@ foreach ($cmd in $bashCommands) {
             # WSL command
             $wslDumpPath = "/mnt/c/Users/i/Downloads/$dumpName"
             Write-Host "Using WSL path: $wslDumpPath"
-            & wsl bash ./analyze-rocketchat-dump.sh --format html --output $bashOutputPath $wslDumpPath
+            & wsl bash ./scripts/analyze-rocketchat-dump.sh --format html --output $bashOutputPath $wslDumpPath
         } else {
             # Direct bash command
-            & bash ./analyze-rocketchat-dump.sh --format html --output $bashOutputPath $DumpPath
+            & bash ./scripts/analyze-rocketchat-dump.sh --format html --output $bashOutputPath $DumpPath
         }
         
         $bashEndTime = Get-Date

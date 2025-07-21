@@ -126,7 +126,7 @@ foreach ($dump in $testDumps) {
     $startTime = Get-Date
     
     try {
-        & ".\Analyze-RocketChatDump.ps1" -DumpPath $dumpPath -OutputFormat HTML -ExportPath $htmlOutput -ErrorAction Stop | Out-Host
+        & ".\scripts\Analyze-RocketChatDump.ps1" -DumpPath $dumpPath -OutputFormat HTML -ExportPath $htmlOutput -ErrorAction Stop | Out-Host
         $endTime = Get-Date
         $duration = ($endTime - $startTime).TotalSeconds
         
@@ -151,7 +151,7 @@ foreach ($dump in $testDumps) {
     # Test Console output
     $startTime = Get-Date
     try {
-        $consoleOutput = & ".\Analyze-RocketChatDump.ps1" -DumpPath $dumpPath -OutputFormat Console 2>&1
+        $consoleOutput = & ".\scripts\Analyze-RocketChatDump.ps1" -DumpPath $dumpPath -OutputFormat Console 2>&1
         $endTime = Get-Date
         $duration = ($endTime - $startTime).TotalSeconds
         
@@ -182,7 +182,7 @@ foreach ($dump in $testDumps) {
     $startTime = Get-Date
     
     try {
-        $bashResult = & wsl bash ./analyze-rocketchat-dump.sh --format html --output $bashHtmlOutput $wslDumpPath 2>&1
+        $bashResult = & wsl bash ./scripts/analyze-rocketchat-dump.sh --format html --output $bashHtmlOutput $wslDumpPath 2>&1
         $endTime = Get-Date
         $duration = ($endTime - $startTime).TotalSeconds
         
@@ -207,7 +207,7 @@ foreach ($dump in $testDumps) {
     # Test Console output
     $startTime = Get-Date
     try {
-        $bashConsoleOutput = & wsl bash ./analyze-rocketchat-dump.sh $wslDumpPath 2>&1
+        $bashConsoleOutput = & wsl bash ./scripts/analyze-rocketchat-dump.sh $wslDumpPath 2>&1
         $endTime = Get-Date
         $duration = ($endTime - $startTime).TotalSeconds
         
@@ -236,7 +236,7 @@ if ($largestDump) {
     # Performance test - PowerShell
     $perfStartTime = Get-Date
     try {
-        & ".\Analyze-RocketChatDump.ps1" -DumpPath $largestDump.FullName -OutputFormat HTML -ExportPath "perf-test-ps.html" -ErrorAction Stop | Out-Null
+        & ".\scripts\Analyze-RocketChatDump.ps1" -DumpPath $largestDump.FullName -OutputFormat HTML -ExportPath "perf-test-ps.html" -ErrorAction Stop | Out-Null
         $perfEndTime = Get-Date
         $perfDuration = ($perfEndTime - $perfStartTime).TotalSeconds
         
@@ -255,7 +255,7 @@ if ($largestDump) {
     $perfStartTime = Get-Date
     try {
         $wslPath = "/mnt/c/Users/i/Downloads/$($largestDump.Name)"
-        & wsl bash ./analyze-rocketchat-dump.sh --format html --output "perf-test-bash.html" $wslPath 2>&1 | Out-Null
+        & wsl bash ./scripts/analyze-rocketchat-dump.sh --format html --output "perf-test-bash.html" $wslPath 2>&1 | Out-Null
         $perfEndTime = Get-Date
         $perfDuration = ($perfEndTime - $perfStartTime).TotalSeconds
         
@@ -286,9 +286,9 @@ if ($testDumps.Count -gt 0) {
     $bashParityReport = "parity-bash.html"
     
     try {
-        & ".\Analyze-RocketChatDump.ps1" -DumpPath $testDump.FullName -OutputFormat HTML -ExportPath $psParityReport -ErrorAction Stop | Out-Null
+        & ".\scripts\Analyze-RocketChatDump.ps1" -DumpPath $testDump.FullName -OutputFormat HTML -ExportPath $psParityReport -ErrorAction Stop | Out-Null
         $wslPath = "/mnt/c/Users/i/Downloads/$($testDump.Name)"
-        & wsl bash ./analyze-rocketchat-dump.sh --format html --output $bashParityReport $wslPath 2>&1 | Out-Null
+        & wsl bash ./scripts/analyze-rocketchat-dump.sh --format html --output $bashParityReport $wslPath 2>&1 | Out-Null
         
         if ((Test-Path $psParityReport) -and (Test-Path $bashParityReport)) {
             $psSize = (Get-Item $psParityReport).Length

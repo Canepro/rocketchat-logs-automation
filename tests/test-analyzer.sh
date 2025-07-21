@@ -109,11 +109,11 @@ run_quick_test() {
     echo ""
     
     if check_powershell; then
-        pwsh -Command "& './Quick-CrossPlatform-Test.ps1'"
+        pwsh -Command "& './tests/Quick-CrossPlatform-Test.ps1'"
     else
         echo -e "${YELLOW}Running Bash-only test...${NC}"
-        if [[ -f "./analyze-rocketchat-dump.sh" ]]; then
-            bash ./analyze-rocketchat-dump.sh --help
+        if [[ -f "./scripts/analyze-rocketchat-dump.sh" ]]; then
+            bash ./scripts/analyze-rocketchat-dump.sh --help
             echo -e "${GREEN}✅ Bash version basic functionality verified${NC}"
         else
             echo -e "${RED}❌ analyze-rocketchat-dump.sh not found${NC}"
@@ -128,7 +128,7 @@ run_comprehensive_test() {
     echo ""
     
     if check_powershell; then
-        pwsh -Command "& './Production-Readiness-Test.ps1'"
+        pwsh -Command "& './tests/Production-Readiness-Test.ps1'"
     else
         echo -e "${YELLOW}PowerShell not available - running Bash-only comprehensive test...${NC}"
         
@@ -152,14 +152,14 @@ run_comprehensive_test() {
             
             # Test HTML output
             output_file="bash-test-$(basename "$dump")-$(date +%H%M).html"
-            if bash ./analyze-rocketchat-dump.sh --format html --output "$output_file" "$dump"; then
+            if bash ./scripts/analyze-rocketchat-dump.sh --format html --output "$output_file" "$dump"; then
                 echo -e "${GREEN}✅ HTML generation successful: $output_file${NC}"
             else
                 echo -e "${RED}❌ HTML generation failed${NC}"
             fi
             
             # Test console output
-            if bash ./analyze-rocketchat-dump.sh "$dump" > /dev/null; then
+            if bash ./scripts/analyze-rocketchat-dump.sh "$dump" > /dev/null; then
                 echo -e "${GREEN}✅ Console output successful${NC}"
             else
                 echo -e "${RED}❌ Console output failed${NC}"
@@ -175,7 +175,7 @@ run_all_tests() {
     echo ""
     
     if check_powershell; then
-        pwsh -Command "& './Production-Readiness-Test.ps1' -TestAll"
+        pwsh -Command "& './tests/Production-Readiness-Test.ps1' -TestAll"
     else
         echo -e "${YELLOW}PowerShell not available - running extended Bash testing...${NC}"
         run_comprehensive_test
