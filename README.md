@@ -7,6 +7,12 @@
 
 A comprehensive automation tool for analyzing RocketChat support dumps and system logs. Provides detailed health scoring, performance analysis, security auditing, and professional reporting.
 
+## 🔥 **Latest Update v1.4.1** - Critical PowerShell Fixes (July 21, 2025)
+✅ **FIXED**: PowerShell HTML generation duplicate content issue  
+✅ **FIXED**: Wrong section placement in reports  
+✅ **RESULT**: PowerShell now matches bash quality with 100% feature parity  
+📖 **Details**: [PowerShell HTML Fix Documentation](docs/POWERSHELL-HTML-FIX.md)
+
 ## ✨ Features
 
 - 🔍 **Comprehensive Analysis**: Logs, settings, statistics, Omnichannel, and apps
