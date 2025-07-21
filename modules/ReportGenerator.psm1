@@ -1170,11 +1170,11 @@ $(foreach ($issue in ($displayEntries | Select-Object -First 50)) {
     }
 
     # Add Apps & Integrations section - Issue #15 Implementation
-    if ($Results.AppsAnalysis) {
+    if ($Results.AppsAnalysis -and $Results.AppsAnalysis.InstalledApps) {
         $appsData = $Results.AppsAnalysis
-        $totalApps = $appsData.InstalledApps.Count
-        $enabledApps = ($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Value.Status -like "*enabled*" -or $_.Value.Status -eq "initialized" }).Count
-        $disabledApps = ($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Value.Status -like "*disabled*" -or $_.Value.Status -like "*invalid*" }).Count
+        $totalApps = if ($appsData.InstalledApps) { $appsData.InstalledApps.Count } else { 0 }
+        $enabledApps = if ($appsData.InstalledApps) { ($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Value.Status -like "*enabled*" -or $_.Value.Status -eq "initialized" }).Count } else { 0 }
+        $disabledApps = if ($appsData.InstalledApps) { ($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Value.Status -like "*disabled*" -or $_.Value.Status -like "*invalid*" }).Count } else { 0 }
         $appIssues = if ($appsData.Issues) { $appsData.Issues.Count } else { 0 }
 
         $html += @"

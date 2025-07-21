@@ -102,9 +102,9 @@ function Invoke-LogAnalysis {
                 try {
                     $parsedLogEntry = $entry.string | ConvertFrom-Json
                     $actualLogEntry = $parsedLogEntry
-                    $timestamp = $entry.ts ?? $parsedLogEntry.time ?? $parsedLogEntry.timestamp
-                    $level = $parsedLogEntry.level ?? "info"
-                    $message = $parsedLogEntry.msg ?? $parsedLogEntry.message ?? ""
+                    $timestamp = if ($entry.ts) { $entry.ts } elseif ($parsedLogEntry.time) { $parsedLogEntry.time } else { $parsedLogEntry.timestamp }
+                    $level = if ($parsedLogEntry.level) { $parsedLogEntry.level } else { "info" }
+                    $message = if ($parsedLogEntry.msg) { $parsedLogEntry.msg } elseif ($parsedLogEntry.message) { $parsedLogEntry.message } else { "" }
                 } catch {
                     # If parsing fails, treat the string as the message
                     $timestamp = $entry.ts
@@ -112,9 +112,9 @@ function Invoke-LogAnalysis {
                 }
             } else {
                 # Standard format
-                $timestamp = $entry.timestamp ?? $entry.ts ?? $entry.time
-                $level = $entry.level ?? $entry.severity ?? "info"
-                $message = $entry.message ?? $entry.msg ?? $entry.text ?? ""
+                $timestamp = if ($entry.timestamp) { $entry.timestamp } elseif ($entry.ts) { $entry.ts } else { $entry.time }
+                $level = if ($entry.level) { $entry.level } elseif ($entry.severity) { $entry.severity } else { "info" }
+                $message = if ($entry.message) { $entry.message } elseif ($entry.msg) { $entry.msg } elseif ($entry.text) { $entry.text } else { "" }
             }
             
             # Parse timestamp
@@ -173,7 +173,7 @@ function Invoke-LogAnalysis {
                         Pattern = $pattern
                         Timestamp = $timestamp
                         Context = $actualLogEntry
-                        Id = $entry.id ?? "unknown"
+                        Id = if ($entry.id) { $entry.id } else { "unknown" }
                     }
                     
                     # Track pattern frequency
@@ -194,7 +194,7 @@ function Invoke-LogAnalysis {
                         Pattern = $pattern
                         Timestamp = $timestamp
                         Context = $actualLogEntry
-                        Id = $entry.id ?? "unknown"
+                        Id = if ($entry.id) { $entry.id } else { "unknown" }
                     }
                 }
             }
@@ -209,7 +209,7 @@ function Invoke-LogAnalysis {
                         Pattern = $pattern
                         Timestamp = $timestamp
                         Context = $actualLogEntry
-                        Id = $entry.id ?? "unknown"
+                        Id = if ($entry.id) { $entry.id } else { "unknown" }
                     }
                 }
             }
