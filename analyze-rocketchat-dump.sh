@@ -552,30 +552,64 @@ analyze_apps() {
     local disabled_apps=0
     local outdated_apps=0
     local security_risk_apps=0
+    local security_apps=0
+    local performance_apps=0
+    local integration_apps=0
     
-    # Count total apps
-    if jq -e 'type == "array"' "$apps_file" >/dev/null 2>&1; then
+    # Count total apps - handle both array and object structures
+    if jq -e '.apps and (.apps | type == "array")' "$apps_file" >/dev/null 2>&1; then
+        # Structure: {"apps": [...]}
+        total_apps=$(jq '.apps | length' "$apps_file")
+        
+        # Analyze each app
+        local apps_analysis=$(mktemp)
+        jq -r '.apps[] | 
+            select(.name and .version and .status) |
+            "\(.name)|\(.version)|\(.status)|\(.author.name // .author // "unknown")|\(.description // "")"
+        ' "$apps_file" > "$apps_analysis" 2>/dev/null || true
+        
+    elif jq -e 'type == "array"' "$apps_file" >/dev/null 2>&1; then
+        # Structure: [...]
         total_apps=$(jq 'length' "$apps_file")
         
         # Analyze each app
         local apps_analysis=$(mktemp)
         jq -r '.[] | 
             select(.name and .version and .status) |
-            "\(.name)|\(.version)|\(.status)|\(.author // "unknown")|\(.description // "")"
+            "\(.name)|\(.version)|\(.status)|\(.author.name // .author // "unknown")|\(.description // "")"
         ' "$apps_file" > "$apps_analysis" 2>/dev/null || true
         
-        # Count by status and analyze
+    else
+        total_apps=1
+        local apps_analysis=$(mktemp)
+    fi
+    
+    # Count by status and analyze
+    if [[ -f "$apps_analysis" ]]; then
         while IFS='|' read -r name version status author description; do
             [[ -z "$name" ]] && continue
             
             case "$status" in
-                "enabled"|"true") ((enabled_apps++)) ;;
-                "disabled"|"false") ((disabled_apps++)) ;;
+                "enabled"|"true"|"initialized") ((enabled_apps++)) ;;
+                "disabled"|"false"|"invalid") ((disabled_apps++)) ;;
             esac
             
             # Check for security-related apps
-            if [[ "$name" =~ (auth|security|login|oauth|ldap|saml) ]]; then
+            if [[ "$name" =~ (auth|security|login|oauth|ldap|saml|sso|2fa|mfa) ]] || [[ "$description" =~ (auth|security|login|oauth|ldap|saml|sso|2fa|mfa) ]]; then
+                ((security_apps++))
                 echo "Security App: $name ($status) - $description" >> "${SCRIPT_DIR}/.tmp_apps_security" 2>/dev/null || true
+            fi
+            
+            # Check for performance-related apps
+            if [[ "$name" =~ (monitor|performance|metrics|analytics|stats) ]] || [[ "$description" =~ (monitor|performance|metrics|analytics|stats) ]]; then
+                ((performance_apps++))
+                echo "Performance App: $name ($status) - $description" >> "${SCRIPT_DIR}/.tmp_apps_performance" 2>/dev/null || true
+            fi
+            
+            # Check for integration apps
+            if [[ "$name" =~ (webhook|api|bot|connector|integration|telegram|slack|jitsi|zoom|teams) ]] || [[ "$description" =~ (webhook|api|bot|connector|integration|telegram|slack|jitsi|zoom|teams) ]]; then
+                ((integration_apps++))
+                echo "Integration App: $name ($status) - $description" >> "${SCRIPT_DIR}/.tmp_apps_integration" 2>/dev/null || true
             fi
             
             # Check for potentially outdated apps (simple heuristic)
@@ -590,8 +624,6 @@ analyze_apps() {
         done < "$apps_analysis"
         
         rm -f "$apps_analysis"
-    else
-        total_apps=1
     fi
     
     # Store results
@@ -600,6 +632,9 @@ analyze_apps() {
     ANALYSIS_RESULTS[apps_disabled]=$disabled_apps
     ANALYSIS_RESULTS[apps_outdated]=$outdated_apps
     ANALYSIS_RESULTS[apps_security_risk]=$security_risk_apps
+    ANALYSIS_RESULTS[apps_security]=$security_apps
+    ANALYSIS_RESULTS[apps_performance]=$performance_apps
+    ANALYSIS_RESULTS[apps_integration]=$integration_apps
     
     log "SUCCESS" "Apps analysis complete. Found $total_apps apps ($enabled_apps enabled, $disabled_apps disabled)"
 }
@@ -2262,30 +2297,113 @@ EOF
 
     # Add apps analysis if available
     if [[ -n "${ANALYSIS_RESULTS[apps_total]:-}" ]]; then
+        local total_apps="${ANALYSIS_RESULTS[apps_total]:-0}"
+        local enabled_apps="${ANALYSIS_RESULTS[apps_enabled]:-0}"
+        local disabled_apps="${ANALYSIS_RESULTS[apps_disabled]:-0}"
+        local app_issues="${ANALYSIS_RESULTS[apps_issues]:-0}"
+        
         cat << EOF
-            <!-- Apps Analysis Section -->
+            <!-- Interactive Apps & Integrations Section - v1.5.0 Implementation -->
             <div class="section">
-                <h2>🔌 Apps & Integrations</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h4>📱 Installed Apps</h4>
-                        <div class="stat-row">
-                            <span class="stat-label">Total Apps:</span>
-                            <span class="stat-value">${ANALYSIS_RESULTS[apps_total]}</span>
+                <h2 onclick="toggleSection(this)">🧩 Apps & Integrations ▼</h2>
+                <div class="section-content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h4>� App Overview</h4>
+                            <p><strong>Total Apps:</strong> <span style="font-weight: bold; font-size: 1.2em; color: #007acc;">$total_apps</span></p>
+                            <p><strong>Enabled/Active:</strong> <span style="color: #28a745; font-weight: bold;">$enabled_apps</span></p>
+                            <p><strong>Disabled/Issues:</strong> <span style="color: #dc3545; font-weight: bold;">$disabled_apps</span></p>
+                            <p><strong>Issues Found:</strong> <span style="color: #ffc107; font-weight: bold;">$app_issues</span></p>
                         </div>
-                        <div class="stat-row">
-                            <span class="stat-label">✅ Enabled:</span>
-                            <span class="stat-value">${ANALYSIS_RESULTS[apps_enabled]}</span>
-                        </div>
-                        <div class="stat-row">
-                            <span class="stat-label">❌ Disabled:</span>
-                            <span class="stat-value">${ANALYSIS_RESULTS[apps_disabled]}</span>
-                        </div>
-                        <div class="stat-row">
-                            <span class="stat-label">⚠️ Outdated:</span>
-                            <span class="stat-value">${ANALYSIS_RESULTS[apps_outdated]}</span>
+                        <div class="stat-card">
+                            <h4>🔍 Special Categories</h4>
+                            <p><strong>🔒 Security Apps:</strong> ${ANALYSIS_RESULTS[apps_security]:-0}</p>
+                            <p><strong>📈 Performance Apps:</strong> ${ANALYSIS_RESULTS[apps_performance]:-0}</p>
+                            <p><strong>🔧 Integration Apps:</strong> ${ANALYSIS_RESULTS[apps_integration]:-0}</p>
                         </div>
                     </div>
+EOF
+
+        # Parse and display actual app data if apps file exists
+        if [[ -f "${DUMP_FILES[apps]}" && $total_apps -gt 0 ]]; then
+            cat << EOF
+                    <h3>📱 Installed Applications</h3>
+                    <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 15px 0;">
+EOF
+            
+            # Parse apps JSON and create interactive entries
+            local apps_parsed=$(jq -r '.apps[]? // empty | @base64' "${DUMP_FILES[apps]}" 2>/dev/null | head -10)
+            if [[ -n "$apps_parsed" ]]; then
+                while IFS= read -r app_data; do
+                    if [[ -n "$app_data" ]]; then
+                        local app_json=$(echo "$app_data" | base64 -d 2>/dev/null)
+                        if [[ -n "$app_json" ]]; then
+                            local app_name=$(echo "$app_json" | jq -r '.name // "Unknown"' 2>/dev/null)
+                            local app_version=$(echo "$app_json" | jq -r '.version // "Unknown"' 2>/dev/null)
+                            local app_status=$(echo "$app_json" | jq -r '.status // "Unknown"' 2>/dev/null)
+                            local app_author=$(echo "$app_json" | jq -r '.author.name // .author // "Unknown"' 2>/dev/null)
+                            local app_description=$(echo "$app_json" | jq -r '.description // ""' 2>/dev/null | head -c 150)
+                            
+                            # Determine status icon and color
+                            local status_icon status_color
+                            case "$app_status" in
+                                *enabled*|initialized) status_icon="✅"; status_color="#28a745" ;;
+                                *disabled*|*invalid*) status_icon="❌"; status_color="#dc3545" ;;
+                                *) status_icon="❓"; status_color="#6c757d" ;;
+                            esac
+                            
+                            cat << EOF
+                        <div style="border: 1px solid #dee2e6; border-radius: 6px; padding: 15px; margin: 10px 0; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <h4 style="margin: 0; color: #2c3e50; font-size: 1.1em;">$status_icon $app_name</h4>
+                                <span style="background: $status_color; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold;">$(echo "$app_status" | tr '[:lower:]' '[:upper:]')</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 0.9em; color: #555;">
+                                <div><strong>Version:</strong> $app_version</div>
+                                <div><strong>Author:</strong> $app_author</div>
+                            </div>
+EOF
+                            if [[ -n "$app_description" && "$app_description" != "null" ]]; then
+                                cat << EOF
+                            <p style="margin: 8px 0 0 0; color: #6c757d; font-style: italic;">$app_description</p>
+EOF
+                            fi
+                            cat << EOF
+                        </div>
+EOF
+                        fi
+                    fi
+                done <<< "$apps_parsed"
+            else
+                # Fallback display for apps data
+                cat << EOF
+                        <div style="border: 1px solid #dee2e6; border-radius: 6px; padding: 15px; margin: 10px 0; background: white; text-align: center;">
+                            <p style="margin: 0; color: #6c757d; font-style: italic;">📱 $total_apps apps installed - detailed parsing available with jq</p>
+                        </div>
+EOF
+            fi
+            
+            cat << EOF
+                    </div>
+EOF
+        fi
+
+        # Add app issues if any exist
+        if [[ $app_issues -gt 0 ]]; then
+            cat << EOF
+                    <h3>⚠️ App Issues & Recommendations</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="padding: 10px; margin: 5px 0; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px;">
+                            ⚠️ <strong>App Issues Detected:</strong> $app_issues issues found that may require attention
+                        </li>
+                        <li style="padding: 10px; margin: 5px 0; background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 6px;">
+                            💡 <strong>Recommendation:</strong> Review disabled apps and update outdated versions
+                        </li>
+                    </ul>
+EOF
+        fi
+
+        cat << EOF
                 </div>
             </div>
 EOF
