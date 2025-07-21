@@ -1,6 +1,6 @@
 # 🚀 RocketChat Support Dump Analyzer
 
-**Current Version:** v1.4.2 (2025-07-21)
+**Current Version:** v1.4.3 (2025-07-21)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
@@ -17,7 +17,8 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 - 🔐 **Security Auditing**: Identifies vulnerabilities and compliance issues
 - ⚡ **Performance Analysis**: Resource usage and optimization suggestions
 - 🌐 **Cross-Platform**: PowerShell and Bash versions with feature parity
-- 📈 **Production Ready**: 75% validated with comprehensive testing suite
+- 📈 **Production Ready**: 85% validated with comprehensive testing suite and deployment guide
+- 🧹 **Clean Codebase**: Optimized repository with only essential files for production use
 
 ## 🚀 Quick Start
 
@@ -87,6 +88,7 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 │   ├── INSTALLATION.md                # Quick installation guide
 │   ├── ARCHITECTURE.md                # Technical architecture
 │   ├── PRODUCTION-READY.md            # Production deployment guide
+│   ├── PRODUCTION-DEPLOYMENT.md       # Comprehensive deployment guide
 │   ├── TESTING-GUIDE.md               # Testing and validation guide
 │   ├── CHANGELOG.md                   # Version history
 │   ├── COMPATIBILITY.md               # Platform compatibility matrix
