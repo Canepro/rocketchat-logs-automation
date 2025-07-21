@@ -13,6 +13,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Advanced trend analysis features
 - Performance optimization for large files
 
+## [1.5.0] - 2025-07-21
+
+### Added ✨
+- **Professional Repository Structure**: Complete reorganization for GitHub professionalism
+- **Easy Entry Points**: Simple `analyze.ps1/.sh/.bat` and `test.ps1/.sh/.bat` wrappers in root
+- **Organized Directory Structure**: 
+  - `scripts/` for main analyzers
+  - `tests/` for all testing tools
+  - `docs/` for documentation
+  - `examples/` for samples and demonstrations
+- **Comprehensive Documentation**: Added ARCHITECTURE.md with technical design details
+- **Clean README**: Modern formatting with badges, clear structure, and complete project overview
+- **Sample Reports Directory**: Organized HTML output examples for easy reference
+
+### Improved 🚀
+- **Repository Appearance**: Transformed from cluttered root to professional open-source layout
+- **File Organization**: All scripts moved to appropriate directories with updated path references
+- **Documentation Structure**: Complete docs reorganization with clear navigation
+- **User Experience**: Simple commands at root level while maintaining organized backend
+- **Testing Framework**: All test scripts properly organized and accessible
+
+### Fixed 🐛
+- **Module Path Resolution**: PowerShell modules now work correctly from scripts/ subdirectory
+- **Entry Point Parameters**: Fixed parameter passing in wrapper scripts
+- **Cross-Platform Paths**: Updated all internal script references for new directory structure
+- **Help Functionality**: Proper help display through Get-Help in wrapper scripts
+
+### Migration Notes 📦
+- All main functionality now accessed through root-level entry points
+- Previous direct script calls should use new wrapper scripts
+- All test tools moved to `tests/` directory but accessible via `test.ps1/.sh/.bat`
+- Documentation moved to `docs/` directory with comprehensive architecture guide
+
 ## [1.4.0] - 2025-07-21
 
 ### Added ✨

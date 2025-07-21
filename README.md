@@ -40,14 +40,63 @@ tests\test-analyzer.bat
 ## 📁 Project Structure
 
 ```
-├── scripts/                    # Main analyzer scripts
-│   ├── Analyze-RocketChatDump.ps1   # PowerShell version
-│   └── analyze-rocketchat-dump.sh   # Bash version
-├── tests/                      # Testing and validation
-│   ├── Production-Readiness-Test.ps1 # Comprehensive test suite
-│   ├── Quick-CrossPlatform-Test.ps1  # Fast validation
-│   ├── test-analyzer.bat            # Windows test interface
-│   └── test-analyzer.sh             # Linux/macOS test interface
+🚀 RocketChat Support Dump Analyzer/
+├── 📄 analyze.ps1/.sh/.bat         # Easy entry points for analysis
+├── 📄 test.ps1/.sh/.bat            # Easy entry points for testing
+├── 📄 README.md                    # This file
+├── 📄 LICENSE                      # MIT License
+│
+├── 📂 scripts/                     # Main analyzer scripts
+│   ├── Analyze-RocketChatDump.ps1      # PowerShell version (primary)
+│   ├── analyze-rocketchat-dump.sh      # Bash version (Linux/macOS)
+│   └── Clean-AnalyzerOutputs.ps1       # Utility to clean old reports
+│
+├── 📂 tests/                       # Testing and validation suite
+│   ├── Production-Readiness-Test.ps1   # Comprehensive production validation
+│   ├── Quick-CrossPlatform-Test.ps1    # Fast cross-platform testing
+│   ├── test-analyzer.bat              # Windows test interface
+│   ├── test-analyzer.sh               # Linux/macOS test interface
+│   ├── test-analyzer-clean.sh         # Alternative test script
+│   ├── Test-Analyzer.ps1              # Additional PowerShell tests
+│   ├── Test-Simple.ps1                # Simple validation tests
+│   ├── Test-InteractiveLogs.ps1       # Interactive log testing
+│   ├── test-debug.sh                  # Debug testing script
+│   └── bash-test-new.sh               # Bash-specific tests
+│
+├── 📂 docs/                        # Documentation
+│   ├── PRODUCTION-READY.md            # Production deployment guide
+│   ├── TESTING-GUIDE.md               # Testing and validation guide
+│   ├── CHANGELOG.md                   # Version history
+│   ├── COMPATIBILITY.md               # Platform compatibility matrix
+│   ├── CONTRIBUTING.md                # Contribution guidelines
+│   ├── FEATURE-PLAN-v1.4.0.md        # Future development plans
+│   ├── QUICK-START.md                 # Quick start guide
+│   ├── RELEASE_NOTES.md               # Release notes
+│   ├── USAGE.md                       # Detailed usage instructions
+│   └── COMPARISON.md                  # Feature comparison
+│
+├── 📂 examples/                    # Sample files and demonstrations
+│   ├── sample-reports/                # Example HTML reports
+│   ├── Create-InteractiveDemo.ps1     # Interactive demo generator
+│   ├── Generate-Report-Simple.ps1     # Simple report generator
+│   ├── Generate-Report.ps1            # Advanced report generator
+│   ├── generate-report.bat            # Windows batch example
+│   ├── analyze-bash.bat               # Bash wrapper example
+│   ├── debug_output.txt               # Sample debug output
+│   └── full_output.txt                # Sample full output
+│
+├── 📂 modules/                     # PowerShell modules
+│   ├── RocketChatLogParser.psm1       # Log parsing functionality
+│   ├── RocketChatAnalyzer.psm1        # Analysis engine
+│   └── ReportGenerator.psm1           # Report generation
+│
+├── 📂 config/                      # Configuration files
+│   ├── analysis-rules.json            # Analysis rules and patterns
+│   └── report-templates/              # Report templates
+│
+└── 📂 test-dump/                   # Sample test data
+    └── (RocketChat support dump samples)
+```
 ├── docs/                       # Documentation
 │   ├── TESTING-GUIDE.md            # Complete testing guide
 │   └── PRODUCTION-READY.md         # Production deployment guide
@@ -56,7 +105,20 @@ tests\test-analyzer.bat
 └── README.md                   # This file
 ```
 
-## 📋 Prerequisites
+## � Documentation
+
+| Document | Description |
+|----------|-------------|
+| [📖 Quick Start Guide](docs/QUICK-START.md) | Get started in 5 minutes |
+| [🏗️ Architecture](docs/ARCHITECTURE.md) | Technical architecture and design |
+| [🧪 Testing Guide](docs/TESTING-GUIDE.md) | Comprehensive testing procedures |
+| [🚀 Production Ready](docs/PRODUCTION-READY.md) | Production deployment guide |
+| [📊 Usage Examples](docs/USAGE.md) | Detailed usage instructions |
+| [🔄 Compatibility](docs/COMPATIBILITY.md) | Platform compatibility matrix |
+| [📝 Changelog](docs/CHANGELOG.md) | Version history and changes |
+| [🤝 Contributing](docs/CONTRIBUTING.md) | Contribution guidelines |
+
+## �📋 Prerequisites
 
 - **RocketChat support dump files** (any 7.x version)
 - **PowerShell 5.1+** (Windows) or **PowerShell Core 7+** (cross-platform)
