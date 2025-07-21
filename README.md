@@ -11,10 +11,13 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 - **Modern responsive design** with gradient backgrounds and professional styling
 - **Interactive collapsible sections** for detailed exploration
 - **Interactive Log Analysis v1.4.0** with expandable log entries and real-time filtering
-- **JavaScript-powered severity filtering** (Critical, Error, Warning, Info)
+- **JavaScript-powered severity filtering** (Critical, Error, Warning, Info) with real-time counts
+- **Enhanced Configuration Settings** with expandable/collapsible categories
+- **Apps & Integrations v1.5.0** with interactive cards and status indicators
 - **Executive summary** with immediate health assessment and recommendations
 - **Visual health indicators** with color-coded status badges (🟢🟡🔴)
 - **Mobile-friendly** responsive layout for viewing on any device
+- **Cross-platform auto-opening** functionality for Windows, Linux, and macOS
 
 ### 🏥 **Advanced Health Scoring System**
 - **Overall system health percentage** with visual status indicators
@@ -24,7 +27,10 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 - **Trend analysis** and performance insights
 
 ### 🔍 **Comprehensive Analysis**
-- **Dual Implementation**: Both PowerShell and Bash versions (*Interactive Log Analysis v1.4.0 currently PowerShell-only*)
+- **100% Cross-Platform Feature Parity**: Both PowerShell and Bash versions now provide identical functionality
+- **Interactive Log Analysis v1.4.0**: Available in both PowerShell and Bash versions with expandable entries
+- **Enhanced Configuration Settings**: Smart categorization with expandable/collapsible sections
+- **Apps & Integrations v1.5.0**: Real app data parsing with interactive cards and status indicators
 - **Multiple Data Sources**: Analyzes logs, settings, statistics, Omnichannel configuration, and installed apps
 - **Multiple Output Formats**: Console, JSON, CSV, and professional HTML reports
 - **Pattern Recognition**: Automatically detects error patterns and trends
@@ -32,6 +38,24 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 - **Performance Insights**: Analyzes memory usage, user load, and system performance
 - **Configurable Rules**: Customizable analysis rules and thresholds
 - **Cross-Platform**: Works on Windows, macOS, and Linux
+
+## 📊 Feature Parity Matrix
+
+| Feature | PowerShell Version | Bash Version |
+|---------|-------------------|--------------|
+| Interactive Log Analysis v1.4.0 | ✅ | ✅ |
+| Expandable Configuration Settings | ✅ | ✅ |
+| Apps & Integrations Analysis v1.5.0 | ✅ | ✅ |
+| Dynamic Recommendations | ✅ | ✅ |
+| Analysis Summary & Technical Details | ✅ | ✅ |
+| Auto-opening HTML Reports | ✅ | ✅ |
+| Cross-platform Support | ✅ | ✅ |
+| JSON Export | ✅ | ✅ |
+| CSV Export | ✅ | ✅ |
+| Health Score Calculation | ✅ | ✅ |
+| Real-time Log Filtering | ✅ | ✅ |
+| Settings Categorization | ✅ | ✅ |
+| **FEATURE PARITY** | **100%** | **100%** |
 
 ## 📋 Requirements
 
@@ -192,7 +216,7 @@ The tool generates **production-ready HTML reports** with modern design and inte
 - **Consistent display logic** - Accurate counts between summary and detailed views
 - **Cross-version compatibility** - Works with RocketChat 7.2.0, 7.6.1, 7.8.0+
 - **Smart fallback** - Shows sample entries when no real errors are found
-- **Cross-platform support** - Available in both PowerShell and Bash versions
+- **100% Cross-platform support** - Available in both PowerShell and Bash versions with identical functionality
 
 ### 🏥 Health Scoring Algorithm
 
@@ -664,10 +688,11 @@ For questions or issues related to this tool:
 
 ---
 
-**Version**: 1.3.0  
-**Last Updated**: 2025-07-20  
+**Version**: 1.4.0  
+**Last Updated**: 2025-07-21  
 **Compatibility**: RocketChat 3.0+ support dumps
 **Production Tested**: ✅ RocketChat 7.8.0
+**Cross-Platform Feature Parity**: ✅ 100% PowerShell ↔ Bash
 
 ## 🌟 Star this Repository
 If you find this tool helpful, please consider giving it a ⭐ on GitHub!
