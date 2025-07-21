@@ -295,6 +295,12 @@ try {
     Write-Host "DEBUG: OutputFormat = '$OutputFormat'" -ForegroundColor Magenta
     Write-Host "DEBUG: OutputFormat type = '$($OutputFormat.GetType().FullName)'" -ForegroundColor Magenta
     
+    # Handle array input: take only the first element to prevent switch fall-through
+    if ($OutputFormat -is [array]) {
+        Write-Host "DEBUG: OutputFormat is array, taking first element" -ForegroundColor Yellow
+        $OutputFormat = $OutputFormat[0]
+    }
+    
     # Clear any pipeline objects before switch
     $null = $null
     
@@ -302,6 +308,7 @@ try {
         "Console" {
             Write-Host "DEBUG: Matched Console case" -ForegroundColor Green
             Write-ConsoleReport -Results $AnalysisResults -MinSeverity $Severity
+            break
         }
         "JSON" {
             Write-Host "DEBUG: Matched JSON case" -ForegroundColor Green
@@ -312,6 +319,7 @@ try {
             } else {
                 Write-Output $report
             }
+            break
         }
         "CSV" {
             Write-Host "DEBUG: Matched CSV case" -ForegroundColor Green
@@ -322,6 +330,7 @@ try {
             } else {
                 Write-Output $report
             }
+            break
         }
         "HTML" {
             Write-Host "DEBUG: Matched HTML case" -ForegroundColor Green
@@ -395,10 +404,12 @@ try {
             } catch {
                 Write-Status "Report saved successfully. Please open manually: $fullPath" "Info"
             }
+            break
         }
         default {
             Write-Host "DEBUG: Matched DEFAULT case for '$OutputFormat'" -ForegroundColor Red
             Write-ConsoleReport -Results $AnalysisResults -MinSeverity $Severity
+            break
         }
     }
     
