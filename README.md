@@ -32,10 +32,13 @@ bash analyze-rocketchat-dump.sh /path/to/7.8.0-support-dump
 bash analyze-rocketchat-dump.sh --format html /mnt/c/Users/YourName/Downloads/7.8.0-support-dump
 ```
 
-### **Path Guidelines**
-- **PowerShell**: Use Windows paths → `C:\Users\YourName\Downloads\dump`
-- **Bash on WSL**: Use mount paths → `/mnt/c/Users/YourName/Downloads/dump`  
-- **Bash on Linux/macOS**: Use native paths → `/home/user/Downloads/dump`
+## 📚 Documentation
+
+### **Essential Reading**
+- **🚀 [Usage Guide](USAGE.md)** - Step-by-step instructions for all platforms
+- **📋 [Release Notes](RELEASE_NOTES.md)** - Complete version history and features
+- **📝 [Changelog](CHANGELOG.md)** - Technical changes and improvements
+- **💻 [Examples](examples/)** - Usage examples and real-world scenarios
 
 ## ✨ Features
 
