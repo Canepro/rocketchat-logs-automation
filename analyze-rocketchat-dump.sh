@@ -1846,6 +1846,21 @@ generate_html_report() {
             }
         }
         
+        function toggleSettingsCategory(categoryId) {
+            const categoryDiv = document.getElementById(categoryId);
+            const headerDiv = categoryDiv.previousElementSibling;
+            const arrow = headerDiv.querySelector('span:last-child');
+            const isExpanded = categoryDiv.style.display === 'block' || categoryDiv.style.display === '';
+            
+            if (isExpanded) {
+                categoryDiv.style.display = 'none';
+                arrow.textContent = '▼';
+            } else {
+                categoryDiv.style.display = 'block';
+                arrow.textContent = '▲';
+            }
+        }
+        
         function initializeReport() {
             // Auto-expand critical sections
             const criticalSections = document.querySelectorAll('.collapsible');
@@ -2409,25 +2424,357 @@ EOF
 EOF
     fi
 
-    # Add recommendations section
-    cat << EOF
-            <!-- Recommendations Section -->
+    # Add Configuration Settings section
+    if [[ -n "${ANALYSIS_RESULTS[settings_total]:-}" ]]; then
+        local total_settings="${ANALYSIS_RESULTS[settings_total]:-0}"
+        local security_settings="${ANALYSIS_RESULTS[settings_security_count]:-0}"
+        local performance_settings="${ANALYSIS_RESULTS[settings_performance_count]:-0}"
+        local settings_issues="${ANALYSIS_RESULTS[settings_security_issues]:-0}"
+        local general_settings=$((total_settings - security_settings - performance_settings))
+        
+        cat << EOF
+            <!-- Configuration Settings Section -->
             <div class="section">
-                <h2>💡 Recommendations</h2>
-                <div class="recommendations">
-                    <h3>🎯 Action Items</h3>
-                    <ul>
+                <h2 onclick="toggleSection(this)">⚙️ Configuration Settings ▼</h2>
+                <div class="section-content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <span style="font-size: 2em;">📊</span>
+                                <div>
+                                    <h3 style="margin: 0;">Total Settings</h3>
+                                    <p style="margin: 0; font-size: 1.2em; font-weight: bold; color: #007acc;">$total_settings</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <span style="font-size: 2em;">🔒</span>
+                                <div>
+                                    <h3 style="margin: 0;">Security Settings</h3>
+                                    <p style="margin: 0; font-size: 1.2em; font-weight: bold; color: #dc3545;">$security_settings</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <span style="font-size: 2em;">⚡</span>
+                                <div>
+                                    <h3 style="margin: 0;">Performance Settings</h3>
+                                    <p style="margin: 0; font-size: 1.2em; font-weight: bold; color: #28a745;">$performance_settings</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <span style="font-size: 2em;">$(if [[ $settings_issues -gt 0 ]]; then echo "⚠️"; else echo "✅"; fi)</span>
+                                <div>
+                                    <h3 style="margin: 0;">Configuration Issues</h3>
+                                    <p style="margin: 0; font-size: 1.2em; font-weight: bold; color: $(if [[ $settings_issues -gt 0 ]]; then echo "#ffc107"; else echo "#28a745"; fi);">$settings_issues</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+EOF
+
+        # Add configuration issues if any exist
+        if [[ $settings_issues -gt 0 ]]; then
+            cat << EOF
+                    <h3 style="color: #ffc107; display: flex; align-items: center; gap: 8px;">
+                        <span>⚠️</span> Configuration Issues Found
+                    </h3>
+                    <ul style="list-style: none; padding: 0; margin: 15px 0;">
+EOF
+            
+            # Add security issues if they exist
+            if [[ -f "${SCRIPT_DIR}/.tmp_settings_security_issues" ]]; then
+                while IFS= read -r line; do
+                    [[ -z "$line" ]] && continue
+                    cat << EOF
+                        <li style="padding: 12px; margin: 8px 0; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.2em;">🚨</span>
+                            <div>
+                                <strong>[SECURITY]</strong> $line
+                                <br><small style="color: #856404;">⚙️ Review security configuration settings</small>
+                            </div>
+                        </li>
+EOF
+                done < "${SCRIPT_DIR}/.tmp_settings_security_issues"
+            fi
+            
+            # Add performance issues if they exist
+            if [[ -f "${SCRIPT_DIR}/.tmp_settings_performance_issues" ]]; then
+                while IFS= read -r line; do
+                    [[ -z "$line" ]] && continue
+                    cat << EOF
+                        <li style="padding: 12px; margin: 8px 0; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.2em;">⚡</span>
+                            <div>
+                                <strong>[PERFORMANCE]</strong> $line
+                                <br><small style="color: #155724;">⚙️ Optimize performance configuration</small>
+                            </div>
+                        </li>
+EOF
+                done < "${SCRIPT_DIR}/.tmp_settings_performance_issues"
+            fi
+            
+            cat << EOF
+                    </ul>
+EOF
+        fi
+
+        # Add expandable settings categories with actual data
+        cat << EOF
+                    <div style="margin-top: 30px;">
+                        <h3 style="display: flex; align-items: center; gap: 8px; color: #495057;">
+                            <span>📁</span> Settings Categories
+                        </h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0;">
+EOF
+
+        # Security Settings Category - Expandable
+        if [[ $security_settings -gt 0 ]]; then
+            cat << EOF
+                            <div style="border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="background: linear-gradient(90deg, #dc3545, #c82333); color: white; padding: 15px; cursor: pointer;" onclick="toggleSettingsCategory('security-settings')">
+                                    <h4 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                                        <span>🔒</span> Security Settings ($security_settings)
+                                        <span style="margin-left: auto;">▼</span>
+                                    </h4>
+                                </div>
+                                <div id="security-settings" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
+EOF
+            
+            # Parse and display security settings if settings file exists
+            if [[ -f "${DUMP_FILES[settings]}" ]]; then
+                # Extract security-related settings from JSON
+                local security_keys="$(jq -r 'to_entries[] | select(.key | test("(password|auth|token|secret|ldap|saml|oauth|security|encryption|ssl|tls)"; "i")) | "\(.key)=\(.value)"' "${DUMP_FILES[settings]}" 2>/dev/null | head -20)"
+                
+                if [[ -n "$security_keys" ]]; then
+                    while IFS='=' read -r setting_name setting_value; do
+                        [[ -z "$setting_name" ]] && continue
+                        # Truncate long values
+                        if [[ ${#setting_value} -gt 50 ]]; then
+                            setting_value="${setting_value:0:47}..."
+                        fi
+                        # Handle null values
+                        if [[ "$setting_value" == "null" || -z "$setting_value" ]]; then
+                            setting_value="<em style='color: #6c757d;'>null</em>"
+                        fi
+                        
+                        cat << EOF
+                                    <div style="border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;">
+                                        <div style="font-weight: bold; color: #495057; word-break: break-word;">$setting_name</div>
+                                        <div style="color: #6c757d; margin-top: 2px; word-break: break-all;">$setting_value</div>
+                                    </div>
+EOF
+                    done <<< "$security_keys"
+                else
+                    cat << EOF
+                                    <div style="color: #6c757d; font-style: italic; text-align: center; padding: 20px;">
+                                        Security settings detected but detailed parsing requires jq
+                                    </div>
+EOF
+                fi
+            else
+                cat << EOF
+                                    <div style="color: #6c757d; font-style: italic; text-align: center; padding: 20px;">
+                                        No settings file available for detailed analysis
+                                    </div>
+EOF
+            fi
+            
+            cat << EOF
+                                </div>
+                            </div>
+EOF
+        fi
+
+        # Performance Settings Category - Expandable
+        if [[ $performance_settings -gt 0 ]]; then
+            cat << EOF
+                            <div style="border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="background: linear-gradient(90deg, #28a745, #218838); color: white; padding: 15px; cursor: pointer;" onclick="toggleSettingsCategory('performance-settings')">
+                                    <h4 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                                        <span>⚡</span> Performance Settings ($performance_settings)
+                                        <span style="margin-left: auto;">▼</span>
+                                    </h4>
+                                </div>
+                                <div id="performance-settings" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
+EOF
+            
+            # Parse and display performance settings
+            if [[ -f "${DUMP_FILES[settings]}" ]]; then
+                local performance_keys="$(jq -r 'to_entries[] | select(.key | test("(cache|limit|timeout|max|pool|buffer|memory|cpu|performance|rate|throttle)"; "i")) | "\(.key)=\(.value)"' "${DUMP_FILES[settings]}" 2>/dev/null | head -20)"
+                
+                if [[ -n "$performance_keys" ]]; then
+                    while IFS='=' read -r setting_name setting_value; do
+                        [[ -z "$setting_name" ]] && continue
+                        # Truncate long values
+                        if [[ ${#setting_value} -gt 50 ]]; then
+                            setting_value="${setting_value:0:47}..."
+                        fi
+                        # Handle null values
+                        if [[ "$setting_value" == "null" || -z "$setting_value" ]]; then
+                            setting_value="<em style='color: #6c757d;'>null</em>"
+                        fi
+                        
+                        cat << EOF
+                                    <div style="border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;">
+                                        <div style="font-weight: bold; color: #495057; word-break: break-word;">$setting_name</div>
+                                        <div style="color: #6c757d; margin-top: 2px; word-break: break-all;">$setting_value</div>
+                                    </div>
+EOF
+                    done <<< "$performance_keys"
+                else
+                    cat << EOF
+                                    <div style="color: #6c757d; font-style: italic; text-align: center; padding: 20px;">
+                                        Performance settings detected but detailed parsing requires jq
+                                    </div>
+EOF
+                fi
+            else
+                cat << EOF
+                                    <div style="color: #6c757d; font-style: italic; text-align: center; padding: 20px;">
+                                        No settings file available for detailed analysis
+                                    </div>
+EOF
+            fi
+            
+            cat << EOF
+                                </div>
+                            </div>
+EOF
+        fi
+
+        # General Settings Categories - Group by prefix
+        if [[ $general_settings -gt 0 && -f "${DUMP_FILES[settings]}" ]]; then
+            # Get top categories by counting settings with common prefixes
+            local categories=("Accounts" "LDAP" "SAML" "FileUpload" "Email" "Omnichannel" "Message" "Layout" "API" "Push")
+            local category_count=0
+            
+            for category in "${categories[@]}"; do
+                [[ $category_count -ge 6 ]] && break  # Limit to top 6 categories like PowerShell version
+                
+                local category_pattern=""
+                case "$category" in
+                    "Accounts") category_pattern="(accounts|user|profile|avatar)" ;;
+                    "LDAP") category_pattern="ldap" ;;
+                    "SAML") category_pattern="saml" ;;
+                    "FileUpload") category_pattern="(fileupload|upload|file)" ;;
+                    "Email") category_pattern="(email|smtp|mail)" ;;
+                    "Omnichannel") category_pattern="omnichannel" ;;
+                    "Message") category_pattern="(message|msg|chat)" ;;
+                    "Layout") category_pattern="(layout|ui|theme|css)" ;;
+                    "API") category_pattern="(api|rest|webhook)" ;;
+                    "Push") category_pattern="(push|notification)" ;;
+                esac
+                
+                local category_settings="$(jq -r "to_entries[] | select(.key | test(\"$category_pattern\"; \"i\")) | \"\(.key)=\(.value)\"" "${DUMP_FILES[settings]}" 2>/dev/null | head -15)"
+                local settings_count="$(echo "$category_settings" | grep -c . 2>/dev/null || echo "0")"
+                
+                if [[ $settings_count -gt 0 ]]; then
+                    local category_icon
+                    case "$category" in
+                        "Accounts") category_icon="👤" ;;
+                        "LDAP") category_icon="🔐" ;;
+                        "SAML") category_icon="🔑" ;;
+                        "FileUpload") category_icon="📁" ;;
+                        "Email") category_icon="📧" ;;
+                        "Omnichannel") category_icon="💬" ;;
+                        "Message") category_icon="💭" ;;
+                        "Layout") category_icon="🎨" ;;
+                        "API") category_icon="🔌" ;;
+                        "Push") category_icon="📱" ;;
+                        *) category_icon="⚙️" ;;
+                    esac
+                    
+                    local category_id="general-$(echo "$category" | tr '[:upper:]' '[:lower:]')-settings"
+                    
+                    cat << EOF
+                            <div style="border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="background: linear-gradient(90deg, #007acc, #0056b3); color: white; padding: 15px; cursor: pointer;" onclick="toggleSettingsCategory('$category_id')">
+                                    <h4 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                                        <span>$category_icon</span> $category Settings ($settings_count)
+                                        <span style="margin-left: auto;">▼</span>
+                                    </h4>
+                                </div>
+                                <div id="$category_id" style="display: none; padding: 15px; max-height: 300px; overflow-y: auto;">
+EOF
+                    
+                    while IFS='=' read -r setting_name setting_value; do
+                        [[ -z "$setting_name" ]] && continue
+                        # Truncate long values
+                        if [[ ${#setting_value} -gt 50 ]]; then
+                            setting_value="${setting_value:0:47}..."
+                        fi
+                        # Handle null values
+                        if [[ "$setting_value" == "null" || -z "$setting_value" ]]; then
+                            setting_value="<em style='color: #6c757d;'>null</em>"
+                        fi
+                        
+                        cat << EOF
+                                    <div style="border-bottom: 1px solid #f8f9fa; padding: 8px 0; font-size: 0.9em;">
+                                        <div style="font-weight: bold; color: #495057; word-break: break-word;">$setting_name</div>
+                                        <div style="color: #6c757d; margin-top: 2px; word-break: break-all;">$setting_value</div>
+                                    </div>
+EOF
+                    done <<< "$category_settings"
+                    
+                    cat << EOF
+                                </div>
+                            </div>
+EOF
+                    ((category_count++))
+                fi
+            done
+        fi
+
+        cat << EOF
+                        </div>
+                    </div>
+                </div>
+            </div>
+EOF
+    fi
+    # Add enhanced Recommendations section
+    local total_issues=$((${ANALYSIS_RESULTS[log_error_count]:-0} + ${ANALYSIS_RESULTS[settings_security_issues]:-0} + ${ANALYSIS_RESULTS[settings_performance_issues]:-0}))
+    local health_score=${HEALTH_SCORE[overall]:-75}
+    
+    cat << EOF
+            <!-- Enhanced Recommendations & Action Items Section -->
+            <div class="section">
+                <h2 onclick="toggleSection(this)">💡 Recommendations & Action Items ▼</h2>
+                <div class="section-content">
+                    <div class="recommendations">
+                        <h3>🎯 Priority Actions</h3>
+                        <ul style="margin: 0; padding-left: 20px;">
 EOF
 
     # Generate dynamic recommendations based on analysis
+    local has_recommendations=false
+    
     if [[ ${ANALYSIS_RESULTS[log_error_count]:-0} -gt 0 ]]; then
-        echo "                        <li>🔍 <strong>Review Error Logs:</strong> Found ${ANALYSIS_RESULTS[log_error_count]} errors that need investigation</li>"
+        echo "                            <li style='margin: 10px 0; padding: 5px 0;'>💡 Review and resolve ${ANALYSIS_RESULTS[log_error_count]} error entries in system logs</li>"
+        has_recommendations=true
     fi
     
     if [[ ${ANALYSIS_RESULTS[settings_security_issues]:-0} -gt 0 ]]; then
-        echo "                        <li>🔒 <strong>Security Review:</strong> ${ANALYSIS_RESULTS[settings_security_issues]} security configuration issues detected</li>"
+        echo "                            <li style='margin: 10px 0; padding: 5px 0;'>🔒 Address ${ANALYSIS_RESULTS[settings_security_issues]} security configuration issues immediately</li>"
+        has_recommendations=true
     fi
     
+    if [[ ${ANALYSIS_RESULTS[settings_performance_issues]:-0} -gt 0 ]]; then
+        echo "                            <li style='margin: 10px 0; padding: 5px 0;'>⚡ Optimize ${ANALYSIS_RESULTS[settings_performance_issues]} performance configuration settings</li>"
+        has_recommendations=true
+    fi
+    
+    if [[ ${ANALYSIS_RESULTS[apps_outdated]:-0} -gt 0 ]]; then
+        echo "                            <li style='margin: 10px 0; padding: 5px 0;'>📱 Update ${ANALYSIS_RESULTS[apps_outdated]} outdated applications to latest versions</li>"
+        has_recommendations=true
+    fi
+    
+    # Memory optimization check
     local memory_usage_pct=0
     if [[ -n "${ANALYSIS_RESULTS[stats_memory_mb]:-}" && ${ANALYSIS_RESULTS[stats_memory_mb]} -gt 0 ]]; then
         local total=${ANALYSIS_RESULTS[stats_memory_mb]}
@@ -2436,23 +2783,229 @@ EOF
         memory_usage_pct=$((used * 100 / total))
         
         if [[ $memory_usage_pct -gt 85 ]]; then
-            echo "                        <li>💾 <strong>Memory Optimization:</strong> High memory usage detected (${memory_usage_pct}%)</li>"
+            echo "                            <li style='margin: 10px 0; padding: 5px 0;'>💾 Optimize memory usage - currently at ${memory_usage_pct}% capacity</li>"
+            has_recommendations=true
         fi
     fi
     
-    if [[ $health_score -lt 70 ]]; then
-        echo "                        <li>⚠️ <strong>System Health:</strong> Overall health score is below recommended threshold</li>"
+    # Default recommendations if no specific issues found
+    if [[ "$has_recommendations" != "true" ]]; then
+        cat << EOF
+                            <li style='margin: 10px 0; padding: 5px 0;'>✅ System appears healthy - maintain regular monitoring</li>
+                            <li style='margin: 10px 0; padding: 5px 0;'>📊 Continue regular health checks and performance monitoring</li>
+                            <li style='margin: 10px 0; padding: 5px 0;'>🔄 Keep RocketChat updated to latest stable version</li>
+EOF
     fi
 
     cat << EOF
-                        <li>📊 <strong>Regular Monitoring:</strong> Schedule regular health checks using this tool</li>
-                        <li>📋 <strong>Documentation:</strong> Document any recurring issues for pattern analysis</li>
-                        <li>🔄 <strong>Updates:</strong> Keep RocketChat and dependencies up to date</li>
-                    </ul>
+                        </ul>
+                        
+                        <h3 style="margin-top: 25px;">📋 Next Steps</h3>
+                        <div style="background: rgba(255,255,255,0.8); padding: 15px; border-radius: 8px; margin-top: 10px;">
+                            <ol style="margin: 0; padding-left: 20px;">
+EOF
+
+    # Priority-based next steps
+    if [[ $total_issues -gt 10 ]]; then
+        echo "                                <li style='margin: 8px 0; color: #dc3545;'><strong>URGENT:</strong> Address all critical issues immediately</li>"
+    fi
+    
+    if [[ ${ANALYSIS_RESULTS[log_error_count]:-0} -gt 0 ]]; then
+        echo "                                <li style='margin: 8px 0; color: #dc3545;'>Resolve error-level issues within 24 hours</li>"
+    fi
+    
+    if [[ ${ANALYSIS_RESULTS[settings_security_issues]:-0} -gt 0 || ${ANALYSIS_RESULTS[settings_performance_issues]:-0} -gt 0 ]]; then
+        echo "                                <li style='margin: 8px 0; color: #ffc107;'>Plan to address configuration issues in next maintenance window</li>"
+    fi
+
+    cat << EOF
+                                <li style="margin: 8px 0; color: #17a2b8;">Schedule regular health checks and monitoring</li>
+                                <li style="margin: 8px 0; color: #28a745;">Document any changes made for future reference</li>
+                            </ol>
+                        </div>
+EOF
+
+    # System health alert for low health scores
+    if [[ $health_score -lt 70 ]]; then
+        cat << EOF
+                        
+                        <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <h4 style="margin: 0 0 10px 0; color: #856404;">⚠️ System Health Alert</h4>
+                            <p style="margin: 0; color: #856404;">Your RocketChat instance requires attention. Consider engaging support team for assistance with critical issues.</p>
+                        </div>
+EOF
+    fi
+
+    cat << EOF
+                    </div>
+                </div>
+            </div>
+EOF
+    
+    # Add Analysis Summary & Technical Details section
+    cat << EOF
+            <!-- Analysis Summary & Technical Details Section -->
+            <div class="section">
+                <h2 onclick="toggleSection(this)">📋 Analysis Summary & Technical Details ▶</h2>
+                <div class="section-content" style="display: none;">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h4>🔍 Analysis Scope</h4>
+                            <div class="stat-row">
+                                <span class="stat-label">Log Analysis:</span>
+                                <span class="stat-value">$(if [[ -n "${DUMP_FILES[log]:-}" ]]; then echo "✅ Processed"; else echo "❌ Missing"; fi)</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Settings Analysis:</span>
+                                <span class="stat-value">$(if [[ -n "${DUMP_FILES[settings]:-}" ]]; then echo "✅ Processed"; else echo "❌ Missing"; fi)</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Apps Analysis:</span>
+                                <span class="stat-value">$(if [[ -n "${DUMP_FILES[apps]:-}" ]]; then echo "✅ Processed"; else echo "❌ Missing"; fi)</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Statistics Analysis:</span>
+                                <span class="stat-value">$(if [[ -n "${DUMP_FILES[statistics]:-}" ]]; then echo "✅ Processed"; else echo "❌ Missing"; fi)</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Omnichannel Analysis:</span>
+                                <span class="stat-value">$(if [[ -n "${DUMP_FILES[omnichannel]:-}" ]]; then echo "✅ Processed"; else echo "❌ Missing"; fi)</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <h4>📊 Issue Distribution</h4>
+                            <div class="stat-row">
+                                <span class="stat-label">🔴 Critical Issues:</span>
+                                <span class="stat-value">${HEALTH_SCORE[critical_issues]:-0}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">🟡 Error Issues:</span>
+                                <span class="stat-value">${HEALTH_SCORE[error_issues]:-0}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">🟠 Warning Issues:</span>
+                                <span class="stat-value">${HEALTH_SCORE[warning_issues]:-0}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">📈 Total Issues:</span>
+                                <span class="stat-value">${HEALTH_SCORE[total_issues]:-0}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">🎯 Health Score:</span>
+                                <span class="stat-value">${HEALTH_SCORE[overall]:-0}%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <h4>🛠️ Technical Information</h4>
+                            <div class="stat-row">
+                                <span class="stat-label">RocketChat Version:</span>
+                                <span class="stat-value">${ANALYSIS_RESULTS[stats_version]:-"Unknown"}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Node.js Version:</span>
+                                <span class="stat-value">${ANALYSIS_RESULTS[stats_node_version]:-"Unknown"}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Platform:</span>
+                                <span class="stat-value">${ANALYSIS_RESULTS[stats_platform]:-"Unknown"}</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Memory Usage:</span>
+                                <span class="stat-value">${ANALYSIS_RESULTS[stats_memory_mb]:-"Unknown"}MB</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Database Size:</span>
+                                <span class="stat-value">${ANALYSIS_RESULTS[stats_db_size_mb]:-"Unknown"}MB</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 30px;">
+                        <h3 style="display: flex; align-items: center; gap: 8px; color: #495057;">
+                            <span>📁</span> Dump File Analysis
+                        </h3>
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 15px 0;">
+EOF
+
+    # Add file-by-file breakdown
+    for file_type in log settings statistics apps omnichannel; do
+        local file_path="${DUMP_FILES[$file_type]:-}"
+        if [[ -n "$file_path" && -f "$file_path" ]]; then
+            local file_size=$(stat -f%z "$file_path" 2>/dev/null || stat -c%s "$file_path" 2>/dev/null || echo "Unknown")
+            local file_lines=0
+            if [[ "$file_path" == *.json ]]; then
+                file_lines=$(jq length "$file_path" 2>/dev/null || echo "Unknown")
+            fi
+            
+            cat << EOF
+                            <div style="border: 1px solid #dee2e6; border-radius: 6px; padding: 12px; margin: 8px 0; background: white;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <h5 style="margin: 0; color: #2c3e50;">✅ $(basename "$file_path")</h5>
+                                    <span style="color: #6c757d; font-size: 0.9em;">$file_size bytes</span>
+                                </div>
+                                <div style="font-size: 0.9em; color: #6c757d; margin-top: 4px;">
+                                    <strong>Type:</strong> $file_type | <strong>Format:</strong> JSON | <strong>Entries:</strong> $file_lines
+                                </div>
+                            </div>
+EOF
+        else
+            cat << EOF
+                            <div style="border: 1px solid #dee2e6; border-radius: 6px; padding: 12px; margin: 8px 0; background: #f8f9fa; opacity: 0.6;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <h5 style="margin: 0; color: #6c757d;">❌ $file_type.json</h5>
+                                    <span style="color: #6c757d; font-size: 0.9em;">Not found</span>
+                                </div>
+                                <div style="font-size: 0.9em; color: #6c757d; margin-top: 4px;">
+                                    <strong>Status:</strong> Missing from support dump
+                                </div>
+                            </div>
+EOF
+        fi
+    done
+
+    cat << EOF
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 30px;">
+                        <h3 style="display: flex; align-items: center; gap: 8px; color: #495057;">
+                            <span>⚙️</span> Analysis Configuration
+                        </h3>
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 15px 0;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                                <div>
+                                    <strong>📊 Output Format:</strong><br>
+                                    <span style="color: #6c757d;">$OUTPUT_FORMAT</span>
+                                </div>
+                                <div>
+                                    <strong>� Severity Filter:</strong><br>
+                                    <span style="color: #6c757d;">$SEVERITY</span>
+                                </div>
+                                <div>
+                                    <strong>📁 Dump Path:</strong><br>
+                                    <span style="color: #6c757d; word-break: break-all;">$DUMP_PATH</span>
+                                </div>
+                                <div>
+                                    <strong>🕐 Analysis Time:</strong><br>
+                                    <span style="color: #6c757d;">$(date '+%Y-%m-%d %H:%M:%S')</span>
+                                </div>
+                                <div>
+                                    <strong>🖥️ Analyzer:</strong><br>
+                                    <span style="color: #6c757d;">Bash v1.2.0</span>
+                                </div>
+                                <div>
+                                    <strong>⚡ Performance:</strong><br>
+                                    <span style="color: #6c757d;">Interactive HTML Report</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <!-- Summary Section -->
+            <!-- Executive Summary Section -->
             <div class="section">
                 <h2>📋 Executive Summary</h2>
                 <div class="stat-card">
