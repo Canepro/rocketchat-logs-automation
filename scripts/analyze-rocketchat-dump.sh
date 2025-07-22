@@ -2843,7 +2843,7 @@ EOF
                         $(if [[ -n "${DUMP_FILES[apps]:-}" ]]; then echo "✅ Apps"; else echo "❌ Apps"; fi)
                     </p>
                     <p><strong>Generated:</strong> $(date '+%Y-%m-%d %H:%M:%S')</p>
-                    <p><strong>Tool Version:</strong> RocketChat Support Dump Analyzer v1.4.8 (Bash)</p>
+                    <p><strong>Tool Version:</strong> RocketChat Support Dump Analyzer v2.0.0 (Bash)</p>
                 </div>
             </div>
         </div>

@@ -311,7 +311,15 @@ function Get-SecurityAnalysis {
 function Get-HealthScore {
     <#
     .SYNOPSIS
-        Calculates an overall health score based on all analysis results.
+        Calculates an overall health score based on all analysis results using nuanced scoring.
+    
+    .DESCRIPTION
+        Implements the Project Phoenix v2.0.0 improved health scoring algorithm:
+        - Critical issues: -20 points each
+        - Error issues: -10 points each  
+        - Warning issues: -2 points each
+        - Info issues: -0.5 points each
+        More accurately reflects system health compared to the overly punitive v1.x algorithm.
     
     .PARAMETER AnalysisResults
         Complete analysis results from all modules
@@ -336,62 +344,120 @@ function Get-HealthScore {
             Info = 0
         }
         Recommendations = @()
+        DetailedBreakdown = @()
     }
     
-    # Count issues by severity
+    # Count issues by severity with more nuanced scoring
+    $totalDeduction = 0
     foreach ($analysis in $AnalysisResults.Values) {
         if ($analysis -is [hashtable] -and $analysis.ContainsKey("Issues")) {
             foreach ($issue in $analysis.Issues) {
                 switch ($issue.Severity) {
                     "Critical" { 
                         $healthScore.Issues.Critical++
-                        $healthScore.OverallScore -= 25
+                        $totalDeduction += 20
+                        $healthScore.DetailedBreakdown += "Critical issue: $($issue.Message) (-20 pts)"
                     }
                     "Error" { 
                         $healthScore.Issues.Error++
-                        $healthScore.OverallScore -= 10
+                        $totalDeduction += 10
+                        $healthScore.DetailedBreakdown += "Error: $($issue.Message) (-10 pts)"
                     }
                     "Warning" { 
                         $healthScore.Issues.Warning++
-                        $healthScore.OverallScore -= 5
+                        $totalDeduction += 2
+                        $healthScore.DetailedBreakdown += "Warning: $($issue.Message) (-2 pts)"
                     }
                     "Info" { 
                         $healthScore.Issues.Info++
-                        $healthScore.OverallScore -= 1
+                        $totalDeduction += 0.5
+                        $healthScore.DetailedBreakdown += "Info: $($issue.Message) (-0.5 pts)"
                     }
                 }
             }
         }
     }
     
-    # Calculate component scores
-    if ($AnalysisResults.LogAnalysis -and $AnalysisResults.LogAnalysis.Issues) {
-        $logIssues = $AnalysisResults.LogAnalysis.Issues.Count
-        $healthScore.ComponentScores.Logs = [Math]::Max(100 - ($logIssues * 5), 0)
+    # Apply total deduction
+    $healthScore.OverallScore = [Math]::Max(100 - $totalDeduction, 0)
+    
+    # Calculate component-specific scores with nuanced logic
+    if ($AnalysisResults.LogAnalysis) {
+        $logCritical = ($AnalysisResults.LogAnalysis.Issues | Where-Object { $_.Severity -eq "Critical" }).Count
+        $logErrors = ($AnalysisResults.LogAnalysis.Issues | Where-Object { $_.Severity -eq "Error" }).Count
+        $logWarnings = ($AnalysisResults.LogAnalysis.Issues | Where-Object { $_.Severity -eq "Warning" }).Count
+        
+        $logDeduction = ($logCritical * 20) + ($logErrors * 10) + ($logWarnings * 2)
+        $healthScore.ComponentScores.Logs = [Math]::Max(100 - $logDeduction, 0)
     }
     
-    if ($AnalysisResults.SettingsAnalysis -and $AnalysisResults.SettingsAnalysis.Issues) {
-        $settingsIssues = $AnalysisResults.SettingsAnalysis.Issues.Count
-        $healthScore.ComponentScores.Settings = [Math]::Max(100 - ($settingsIssues * 10), 0)
+    if ($AnalysisResults.SettingsAnalysis) {
+        $settingsCritical = ($AnalysisResults.SettingsAnalysis.Issues | Where-Object { $_.Severity -eq "Critical" }).Count
+        $settingsErrors = ($AnalysisResults.SettingsAnalysis.Issues | Where-Object { $_.Severity -eq "Error" }).Count
+        $settingsWarnings = ($AnalysisResults.SettingsAnalysis.Issues | Where-Object { $_.Severity -eq "Warning" }).Count
+        
+        $settingsDeduction = ($settingsCritical * 20) + ($settingsErrors * 10) + ($settingsWarnings * 2)
+        $healthScore.ComponentScores.Settings = [Math]::Max(100 - $settingsDeduction, 0)
     }
     
-    if ($AnalysisResults.StatisticsAnalysis -and $AnalysisResults.StatisticsAnalysis.Issues) {
-        $performanceIssues = $AnalysisResults.StatisticsAnalysis.Issues.Count
-        $healthScore.ComponentScores.Performance = [Math]::Max(100 - ($performanceIssues * 15), 0)
+    if ($AnalysisResults.StatisticsAnalysis) {
+        $perfCritical = ($AnalysisResults.StatisticsAnalysis.Issues | Where-Object { $_.Severity -eq "Critical" }).Count
+        $perfErrors = ($AnalysisResults.StatisticsAnalysis.Issues | Where-Object { $_.Severity -eq "Error" }).Count
+        $perfWarnings = ($AnalysisResults.StatisticsAnalysis.Issues | Where-Object { $_.Severity -eq "Warning" }).Count
+        
+        $perfDeduction = ($perfCritical * 20) + ($perfErrors * 10) + ($perfWarnings * 2)
+        $healthScore.ComponentScores.Performance = [Math]::Max(100 - $perfDeduction, 0)
     }
     
-    # Ensure overall score doesn't go below 0
-    $healthScore.OverallScore = [Math]::Max($healthScore.OverallScore, 0)
+    # Security scoring (aggregate from all security-related issues)
+    $allSecurityIssues = @()
+    foreach ($analysis in $AnalysisResults.Values) {
+        if ($analysis -is [hashtable] -and $analysis.ContainsKey("Issues")) {
+            $allSecurityIssues += $analysis.Issues | Where-Object { $_.Type -eq "Security" -or $_.Pattern -match "auth|login|security|unauthorized" }
+        }
+    }
     
-    # Generate recommendations based on score
-    if ($healthScore.OverallScore -lt 50) {
-        $healthScore.Recommendations += "Critical: Immediate attention required for multiple components"
-    } elseif ($healthScore.OverallScore -lt 70) {
-        $healthScore.Recommendations += "Warning: Several issues need to be addressed"
-    } elseif ($healthScore.OverallScore -lt 90) {
-        $healthScore.Recommendations += "Good: Minor improvements recommended"
+    $secCritical = ($allSecurityIssues | Where-Object { $_.Severity -eq "Critical" }).Count
+    $secErrors = ($allSecurityIssues | Where-Object { $_.Severity -eq "Error" }).Count  
+    $secWarnings = ($allSecurityIssues | Where-Object { $_.Severity -eq "Warning" }).Count
+    
+    $secDeduction = ($secCritical * 20) + ($secErrors * 10) + ($secWarnings * 2)
+    $healthScore.ComponentScores.Security = [Math]::Max(100 - $secDeduction, 0)
+    
+    # Generate intelligent recommendations based on issue patterns and scores
+    if ($healthScore.Issues.Critical -gt 0) {
+        $healthScore.Recommendations += "🚨 URGENT: $($healthScore.Issues.Critical) critical issue(s) require immediate attention"
+    }
+    
+    if ($healthScore.Issues.Error -gt 5) {
+        $healthScore.Recommendations += "⚠️ HIGH: Multiple error conditions detected ($($healthScore.Issues.Error) total) - investigate error patterns"
+    }
+    
+    if ($healthScore.ComponentScores.Security -lt 80) {
+        $healthScore.Recommendations += "🔒 SECURITY: Review authentication and authorization settings"
+    }
+    
+    if ($healthScore.ComponentScores.Performance -lt 70) {
+        $healthScore.Recommendations += "⚡ PERFORMANCE: System performance issues detected - check resource usage"
+    }
+    
+    # Overall assessment recommendations
+    if ($healthScore.OverallScore -ge 90) {
+        $healthScore.Recommendations += "✅ EXCELLENT: System is operating optimally with minimal issues"
+    } elseif ($healthScore.OverallScore -ge 75) {
+        $healthScore.Recommendations += "✅ GOOD: System is stable with minor issues to address"
+    } elseif ($healthScore.OverallScore -ge 50) {
+        $healthScore.Recommendations += "⚠️ FAIR: System needs attention - multiple issues present"
+    } elseif ($healthScore.OverallScore -ge 25) {
+        $healthScore.Recommendations += "🚨 POOR: System has significant problems requiring urgent action"
     } else {
-        $healthScore.Recommendations += "Excellent: System is running optimally"
+        $healthScore.Recommendations += "🚨 CRITICAL: System is severely compromised - immediate intervention required"
+    }
+    
+    # Add contextual recommendations based on issue volume
+    $totalIssues = $healthScore.Issues.Critical + $healthScore.Issues.Error + $healthScore.Issues.Warning + $healthScore.Issues.Info
+    if ($totalIssues -gt 50) {
+        $healthScore.Recommendations += "📊 ANALYSIS: High issue volume detected ($totalIssues total) - consider reviewing log retention and analysis patterns"
     }
     
     return $healthScore

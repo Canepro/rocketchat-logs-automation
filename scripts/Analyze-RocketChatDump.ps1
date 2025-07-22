@@ -35,7 +35,7 @@
 
 .NOTES
     Author: Support Engineering Team
-    Version: 1.4.8
+    Version: 2.0.0
     Requires: PowerShell 5.1 or later
 #>
 
@@ -224,14 +224,27 @@ try {
     # Load configuration
     if (Test-Path $ConfigFile) {
         Write-Status "Loading configuration from: $ConfigFile" "Info"
-        $config = Get-Content $ConfigFile | ConvertFrom-Json
+        $configJson = Get-Content $ConfigFile | ConvertFrom-Json
+        # Convert JSON config to PowerShell object with proper case
+        $config = @{
+            LogPatterns = @{
+                Error = $configJson.logPatterns.error
+                Warning = $configJson.logPatterns.warning
+                Security = $configJson.logPatterns.security
+            }
+            PerformanceThresholds = @{
+                ResponseTime = if ($configJson.performanceThresholds.responseTime) { $configJson.performanceThresholds.responseTime } else { 5000 }
+                MemoryUsage = if ($configJson.performanceThresholds.memoryUsage) { $configJson.performanceThresholds.memoryUsage } else { 80 }
+                CPUUsage = if ($configJson.performanceThresholds.cpuUsage) { $configJson.performanceThresholds.cpuUsage } else { 90 }
+            }
+        }
     } else {
         Write-Status "Using default configuration" "Warning"
         $config = @{
             LogPatterns = @{
-                Error = @("error", "exception", "failed", "timeout")
-                Warning = @("warn", "deprecated", "slow")
-                Security = @("auth", "login", "permission", "unauthorized")
+                Error = @("error", "exception", "failed", "timeout", "connection refused", "cannot connect", "database error", "mongodb error", "uncaught exception", "stack trace", "fatal error", "critical error", "server error", "internal error", "authentication failed", "authorization failed", "permission denied", "access denied")
+                Warning = @("warn", "warning", "deprecated", "slow query", "slow operation", "high memory usage", "high cpu usage", "retry", "retrying", "fallback", "degraded performance", "rate limit", "quota exceeded", "disk space low", "memory leak")
+                Security = @("auth", "authentication", "authorization", "login failed", "invalid credentials", "unauthorized", "permission", "security", "breach", "attack", "intrusion", "hacking", "exploit", "vulnerability", "malware", "virus", "phishing", "social engineering")
             }
             PerformanceThresholds = @{
                 ResponseTime = 5000
