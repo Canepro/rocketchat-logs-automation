@@ -1,8 +1,8 @@
 <#
 .SYNOPSIS
     Report Generator Module - Functions for generating various report formats.
-
 .DESCRIPTION
+
     This module provides functions to generate reports in different formats including
     console output, JSON, CSV, and HTML reports.
 #>
@@ -16,7 +16,6 @@ try {
     }
 } catch {
     Write-Warning "Could not import RocketChatAnalyzer module: $($_.Exception.Message)"
-}
 
 function Write-ConsoleReport {
     <#
@@ -1219,15 +1218,14 @@ $(foreach ($issue in ($displayEntries | Select-Object -First 50)) {
 "@
     }
 
-    # Add Apps & Integrations section - Issue #15 Implementation
-    if ($Results.AppsAnalysis -and $Results.AppsAnalysis.InstalledApps) {
-        $appsData = $Results.AppsAnalysis
-        $totalApps = if ($appsData.InstalledApps) { $appsData.InstalledApps.Count } else { 0 }
-        $enabledApps = if ($appsData.InstalledApps) { ($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Value.Status -like "*enabled*" -or $_.Value.Status -eq "initialized" }).Count } else { 0 }
-        $disabledApps = if ($appsData.InstalledApps) { ($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Value.Status -like "*disabled*" -or $_.Value.Status -like "*invalid*" }).Count } else { 0 }
-        $appIssues = if ($appsData.Issues) { $appsData.Issues.Count } else { 0 }
+    # Add Apps & Integrations section - Always show, even if no apps data is available
+    $appsData = $Results.AppsAnalysis
+    $totalApps = if ($appsData -and $appsData.InstalledApps) { $appsData.InstalledApps.Count } else { 0 }
+    $enabledApps = if ($appsData -and $appsData.InstalledApps) { ($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Value.Status -like "*enabled*" -or $_.Value.Status -eq "initialized" }).Count } else { 0 }
+    $disabledApps = if ($appsData -and $appsData.InstalledApps) { ($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Value.Status -like "*disabled*" -or $_.Value.Status -like "*invalid*" }).Count } else { 0 }
+    $appIssues = if ($appsData -and $appsData.Issues) { $appsData.Issues.Count } else { 0 }
 
-        $html += @"
+    $html += @"
         <div class="section">
             <h2 onclick="toggleSection(this)">🧩 Apps & Integrations ▼</h2>
             <div class="section-content">
@@ -1239,19 +1237,19 @@ $(foreach ($issue in ($displayEntries | Select-Object -First 50)) {
                         <p><strong>Disabled/Issues:</strong> <span style="color: #dc3545; font-weight: bold;">$disabledApps</span></p>
                         <p><strong>Issues Found:</strong> <span style="color: #ffc107; font-weight: bold;">$appIssues</span></p>
                     </div>
-$(if ($appsData.SecurityApps -and $appsData.SecurityApps.Count -gt 0) {
+$(if ($appsData -and $appsData.SecurityApps -and $appsData.SecurityApps.Count -gt 0) {
 "                    <div class='stat-card'>
                         <h4>🔍 Special Categories</h4>
                         <p><strong>🔒 Security Apps:</strong> $($appsData.SecurityApps.Count)</p>
                         $(if ($appsData.PerformanceApps -and $appsData.PerformanceApps.Count -gt 0) { "<p><strong>📈 Performance Apps:</strong> $($appsData.PerformanceApps.Count)</p>" })
-                        <p><strong>🔧 Integration Apps:</strong> $(($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Key -like "*jitsi*" -or $_.Key -like "*webhook*" -or $_.Key -like "*api*" }).Count)</p>
+                        <p><strong>🔧 Integration Apps:</strong> $(if ($appsData.InstalledApps) { ($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Key -like "*jitsi*" -or $_.Key -like "*webhook*" -or $_.Key -like "*api*" }).Count } else { 0 })</p>
                     </div>"
 } else {
 "                    <div class='stat-card'>
                         <h4>🔍 App Categories</h4>
-                        <p><strong>🔧 Integration Apps:</strong> $(($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Key -like "*jitsi*" -or $_.Key -like "*webhook*" -or $_.Key -like "*api*" }).Count)</p>
-                        <p><strong>💬 Communication:</strong> $(($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Key -like "*chat*" -or $_.Key -like "*message*" }).Count)</p>
-                        <p><strong>🛠️ Utility Apps:</strong> $(($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Key -like "*tool*" -or $_.Key -like "*util*" }).Count)</p>
+                        <p><strong>🔧 Integration Apps:</strong> $(if ($appsData -and $appsData.InstalledApps) { ($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Key -like "*jitsi*" -or $_.Key -like "*webhook*" -or $_.Key -like "*api*" }).Count } else { 0 })</p>
+                        <p><strong>💬 Communication:</strong> $(if ($appsData -and $appsData.InstalledApps) { ($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Key -like "*chat*" -or $_.Key -like "*message*" }).Count } else { 0 })</p>
+                        <p><strong>🛠️ Utility Apps:</strong> $(if ($appsData -and $appsData.InstalledApps) { ($appsData.InstalledApps.GetEnumerator() | Where-Object { $_.Key -like "*tool*" -or $_.Key -like "*util*" }).Count } else { 0 })</p>
                     </div>"
 })
                 </div>
@@ -1529,6 +1527,126 @@ $(foreach ($issue in $appsData.Issues) {
         </div>
 "@
     }
+
+    # Add Statistics Analysis section
+    if ($Results.StatisticsAnalysis) {
+        $statsData = $Results.StatisticsAnalysis
+        $html += @"
+        <div class="section collapsible expanded">
+            <h2 onclick="toggleSection(this)">📊 Server Statistics ▼</h2>
+            <div class="section-content">
+                <div class="stats-grid">
+$(if ($statsData.ServerInfo) {
+    $serverInfo = $statsData.ServerInfo
+"                    <div class='stat-card'>
+                        <h4>🖥️ Server Information</h4>
+                        <p><strong>Version:</strong> $($serverInfo.Version)</p>
+                        <p><strong>Node.js:</strong> $($serverInfo.NodeVersion)</p>
+                        <p><strong>Platform:</strong> $($serverInfo.Platform)</p>
+                        <p><strong>Uptime:</strong> $($serverInfo.Uptime)</p>
+                    </div>"
+})
+$(if ($statsData.UserMetrics) {
+    $userMetrics = $statsData.UserMetrics
+"                    <div class='stat-card'>
+                        <h4>👥 User Metrics</h4>
+                        <p><strong>Total Users:</strong> $($userMetrics.TotalUsers)</p>
+                        <p><strong>Online Users:</strong> $($userMetrics.OnlineUsers)</p>
+                        <p><strong>Active Users:</strong> $($userMetrics.ActiveUsers)</p>
+                        <p><strong>Rooms:</strong> $($userMetrics.TotalRooms)</p>
+                    </div>"
+})
+$(if ($statsData.PerformanceMetrics) {
+    $perf = $statsData.PerformanceMetrics
+"                    <div class='stat-card'>
+                        <h4>⚡ Performance</h4>
+                        <p><strong>Memory Usage:</strong> $($perf.MemoryUsage)</p>
+                        <p><strong>CPU Usage:</strong> $($perf.CPUUsage)</p>
+                        <p><strong>Response Time:</strong> $($perf.ResponseTime)</p>
+                        <p><strong>Load Average:</strong> $($perf.LoadAverage)</p>
+                    </div>"
+})
+                    <div class="stat-card">
+                        <h4>📈 Health Status</h4>
+                        <p><strong>Status:</strong> <span style="color: #28a745;">✅ Running</span></p>
+                        <p><strong>Issues:</strong> $(if ($statsData.Issues) { $statsData.Issues.Count } else { 0 })</p>
+                        <p><strong>Warnings:</strong> 0</p>
+                        <p><strong>Last Check:</strong> $(Get-Date -Format 'HH:mm:ss')</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+"@
+    }
+
+    # Add Security Analysis section
+    $securityAnalysis = if ($Results.SettingsAnalysis) {
+        Get-SecurityAnalysis -Settings $Results.SettingsAnalysis -Issues $allIssues
+    } else {
+        @{ SecurityIssues = @(); Recommendations = @() }
+    }
+
+    # Ensure SecurityIssues is a proper array
+    $securityIssuesCount = if ($securityAnalysis.SecurityIssues) { @($securityAnalysis.SecurityIssues).Count } else { 0 }
+
+    $html += @"
+        <div class="section collapsible expanded">
+            <h2 onclick="toggleSection(this)">🔒 Security Analysis ▼</h2>
+            <div class="section-content">
+                <div class="stats-grid">
+                    <div class="stat-card $(if ($securityIssuesCount -eq 0) { 'score-excellent' } else { 'score-poor' })">
+                        <h4>🛡️ Security Status</h4>
+                        <div style="font-size: 2em; font-weight: bold; margin: 10px 0;">
+                            $(if ($securityIssuesCount -eq 0) { "✅" } else { "⚠️" })
+                        </div>
+                        <p><strong>Issues Found:</strong> $securityIssuesCount</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>🔐 Authentication</h4>
+                        <p><strong>Two Factor:</strong> $(if ($Results.SettingsAnalysis -and $Results.SettingsAnalysis.SecuritySettings -and $Results.SettingsAnalysis.SecuritySettings['Accounts_TwoFactorAuthentication_Enabled'] -eq 'true') { "✅ Enabled" } else { "❌ Disabled" })</p>
+                        <p><strong>Password Policy:</strong> $(if ($Results.SettingsAnalysis -and $Results.SettingsAnalysis.SecuritySettings) { "🔍 Configured" } else { "⚠️ Unknown" })</p>
+                        <p><strong>Rate Limiting:</strong> $(if ($Results.SettingsAnalysis -and $Results.SettingsAnalysis.SecuritySettings) { "🔍 Active" } else { "⚠️ Unknown" })</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>🌐 Network Security</h4>
+                        <p><strong>HTTPS:</strong> $(if ($Results.SettingsAnalysis -and $Results.SettingsAnalysis.SecuritySettings) { "🔍 Checking..." } else { "⚠️ Unknown" })</p>
+                        <p><strong>CORS:</strong> $(if ($Results.SettingsAnalysis -and $Results.SettingsAnalysis.SecuritySettings) { "🔍 Configured" } else { "⚠️ Unknown" })</p>
+                        <p><strong>CSP:</strong> $(if ($Results.SettingsAnalysis -and $Results.SettingsAnalysis.SecuritySettings) { "🔍 Active" } else { "⚠️ Unknown" })</p>
+                    </div>
+                </div>
+$(if ($securityIssuesCount -gt 0) {
+"                <h3 style='color: #dc3545; display: flex; align-items: center; gap: 8px; margin-top: 30px;'>
+                    <span>🚨</span> Security Issues Detected
+                </h3>
+                <ul class='issue-list'>
+$(foreach ($issue in @($securityAnalysis.SecurityIssues)) {
+    $cssClass = "issue-" + $(if ($issue.Severity) { $issue.Severity.ToLower() } else { "info" })
+    $icon = switch ($issue.Severity) {
+        "Critical" { "🚨" }
+        "Error" { "❌" }
+        "Warning" { "⚠️" }
+        default { "ℹ️" }
+    }
+    "                    <li class='issue-item $cssClass'>
+                        <div style='display: flex; align-items: center; gap: 10px;'>
+                            <span style='font-size: 1.2em;'>$icon</span>
+                            <div>
+                                <strong>[$($issue.Severity)]</strong> $($issue.Message)
+                                $(if ($issue.Setting) { "<br><small style='color: #6c757d;'>⚙️ Setting: $($issue.Setting)</small>" })
+                            </div>
+                        </div>
+                    </li>"
+})
+                </ul>"
+} else {
+"                <div style='background: #d4edda; border: 1px solid #28a745; border-radius: 8px; padding: 15px; margin: 15px 0;'>
+                    <h4 style='margin: 0 0 8px 0; color: #155724;'>✅ No Security Issues Detected</h4>
+                    <p style='margin: 0; color: #155724;'>Your RocketChat instance appears to have good security configurations with no critical vulnerabilities found.</p>
+                </div>"
+})
+            </div>
+        </div>
+"@
 
     # Add recommendations section
     $html += @"
