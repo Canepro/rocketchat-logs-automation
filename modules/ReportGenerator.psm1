@@ -550,72 +550,138 @@ function New-HTMLReport {
         </div>
 "@
 
-    # Add log analysis section if available
+
+    # Always show Log Analysis section
+    $htmlContent += @"
+    <div class="section">
+        <h2>📝 System Log Analysis</h2>
+"@
     if ($Results.ContainsKey("LogAnalysis") -and $Results.LogAnalysis.ContainsKey("Summary")) {
         $logSummary = $Results.LogAnalysis.Summary
         $htmlContent += @"
-        
-        <div class="section">
-            <h2>📝 System Log Analysis</h2>
-            <table>
-                <thead>
-                    <tr><th>Metric</th><th>Value</th><th>Status</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td>Total Log Entries</td><td>$($logSummary.TotalEntries)</td><td><span class="badge badge-info">$($logSummary.TotalEntries)</span></td></tr>
-                    <tr><td>Error Messages</td><td>$($logSummary.ErrorCount)</td><td><span class="badge $(if($logSummary.ErrorCount -gt 0){'badge-danger'}else{'badge-success'})">$($logSummary.ErrorCount)</span></td></tr>
-                    <tr><td>Warning Messages</td><td>$($logSummary.WarningCount)</td><td><span class="badge $(if($logSummary.WarningCount -gt 10){'badge-warning'}else{'badge-success'})">$($logSummary.WarningCount)</span></td></tr>
-                    <tr><td>Info Messages</td><td>$($logSummary.InfoCount)</td><td><span class="badge badge-info">$($logSummary.InfoCount)</span></td></tr>
-                </tbody>
-            </table>
-        </div>
+        <table>
+            <thead>
+                <tr><th>Metric</th><th>Value</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Total Log Entries</td><td>$($logSummary.TotalEntries)</td><td><span class="badge badge-info">$($logSummary.TotalEntries)</span></td></tr>
+                <tr><td>Error Messages</td><td>$($logSummary.ErrorCount)</td><td><span class="badge $(if($logSummary.ErrorCount -gt 0){'badge-danger'}else{'badge-success'})">$($logSummary.ErrorCount)</span></td></tr>
+                <tr><td>Warning Messages</td><td>$($logSummary.WarningCount)</td><td><span class="badge $(if($logSummary.WarningCount -gt 10){'badge-warning'}else{'badge-success'})">$($logSummary.WarningCount)</span></td></tr>
+                <tr><td>Info Messages</td><td>$($logSummary.InfoCount)</td><td><span class="badge badge-info">$($logSummary.InfoCount)</span></td></tr>
+            </tbody>
+        </table>
 "@
+    } else {
+        $htmlContent += '<p><em>No log data found.</em></p>'
     }
+    $htmlContent += '</div>'
 
-    # Add settings analysis section if available
+    # Always show Settings Analysis section
+    $htmlContent += @"
+    <div class="section">
+        <h2>⚙️ Configuration Analysis</h2>
+"@
     if ($Results.ContainsKey("SettingsAnalysis") -and $Results.SettingsAnalysis.ContainsKey("Summary")) {
         $settingsSummary = $Results.SettingsAnalysis.Summary
         $htmlContent += @"
-        
-        <div class="section">
-            <h2>⚙️ Configuration Analysis</h2>
-            <table>
-                <thead>
-                    <tr><th>Metric</th><th>Value</th><th>Status</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td>Total Settings Reviewed</td><td>$($settingsSummary.TotalSettings)</td><td><span class="badge badge-info">$($settingsSummary.TotalSettings)</span></td></tr>
-                    <tr><td>Security Issues</td><td>$($settingsSummary.SecurityIssues)</td><td><span class="badge $(if($settingsSummary.SecurityIssues -gt 0){'badge-danger'}else{'badge-success'})">$($settingsSummary.SecurityIssues)</span></td></tr>
-                    <tr><td>Performance Issues</td><td>$($settingsSummary.PerformanceIssues)</td><td><span class="badge $(if($settingsSummary.PerformanceIssues -gt 0){'badge-warning'}else{'badge-success'})">$($settingsSummary.PerformanceIssues)</span></td></tr>
-                    <tr><td>Configuration Warnings</td><td>$($settingsSummary.ConfigurationWarnings)</td><td><span class="badge $(if($settingsSummary.ConfigurationWarnings -gt 0){'badge-warning'}else{'badge-success'})">$($settingsSummary.ConfigurationWarnings)</span></td></tr>
-                </tbody>
-            </table>
-        </div>
+        <table>
+            <thead>
+                <tr><th>Metric</th><th>Value</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Total Settings Reviewed</td><td>$($settingsSummary.TotalSettings)</td><td><span class="badge badge-info">$($settingsSummary.TotalSettings)</span></td></tr>
+                <tr><td>Security Issues</td><td>$($settingsSummary.SecurityIssues)</td><td><span class="badge $(if($settingsSummary.SecurityIssues -gt 0){'badge-danger'}else{'badge-success'})">$($settingsSummary.SecurityIssues)</span></td></tr>
+                <tr><td>Performance Issues</td><td>$($settingsSummary.PerformanceIssues)</td><td><span class="badge $(if($settingsSummary.PerformanceIssues -gt 0){'badge-warning'}else{'badge-success'})">$($settingsSummary.PerformanceIssues)</span></td></tr>
+                <tr><td>Configuration Warnings</td><td>$($settingsSummary.ConfigurationWarnings)</td><td><span class="badge $(if($settingsSummary.ConfigurationWarnings -gt 0){'badge-warning'}else{'badge-success'})">$($settingsSummary.ConfigurationWarnings)</span></td></tr>
+            </tbody>
+        </table>
 "@
+    } else {
+        $htmlContent += '<p><em>No settings data found.</em></p>'
     }
+    $htmlContent += '</div>'
 
-    # Add statistics section if available
+    # Always show Statistics Analysis section
+    $htmlContent += @"
+    <div class="section">
+        <h2>📊 Server Statistics</h2>
+"@
     if ($Results.ContainsKey("StatisticsAnalysis") -and $Results.StatisticsAnalysis.ContainsKey("Summary")) {
         $statsSummary = $Results.StatisticsAnalysis.Summary
         $htmlContent += @"
-        
-        <div class="section">
-            <h2>📊 Server Statistics</h2>
+        <table>
+            <thead>
+                <tr><th>Metric</th><th>Value</th><th>Details</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>RocketChat Version</td><td><strong>$($statsSummary.Version)</strong></td><td><span class="badge badge-info">Current</span></td></tr>
+                <tr><td>Total Users</td><td>$($statsSummary.TotalUsers)</td><td><span class="badge badge-success">Active</span></td></tr>
+                <tr><td>Online Users</td><td>$($statsSummary.OnlineUsers)</td><td><span class="badge badge-info">Now</span></td></tr>
+                <tr><td>Total Messages</td><td>$($statsSummary.TotalMessages)</td><td><span class="badge badge-info">All Time</span></td></tr>
+                <tr><td>Memory Usage</td><td>$($statsSummary.MemoryUsage)MB</td><td><span class="badge $(if($statsSummary.MemoryUsage -gt 8000){'badge-warning'}else{'badge-success'})">$(if($statsSummary.MemoryUsage -gt 8000){'High'}else{'Normal'})</span></td></tr>
+            </tbody>
+        </table>
+"@
+    } else {
+        $htmlContent += '<p><em>No statistics data found.</em></p>'
+    }
+    $htmlContent += '</div>'
+
+    # Always show Omnichannel Analysis section
+    $htmlContent += @"
+    <div class="section">
+        <h2>💬 Omnichannel Configuration</h2>
+"@
+    if ($Results.ContainsKey("OmnichannelAnalysis") -and $Results.OmnichannelAnalysis) {
+        $omni = $Results.OmnichannelAnalysis
+        if ($omni.ContainsKey("Summary")) {
+            $omniSummary = $omni.Summary
+            $htmlContent += @"
             <table>
                 <thead>
-                    <tr><th>Metric</th><th>Value</th><th>Details</th></tr>
+                    <tr><th>Metric</th><th>Value</th></tr>
                 </thead>
                 <tbody>
-                    <tr><td>RocketChat Version</td><td><strong>$($statsSummary.Version)</strong></td><td><span class="badge badge-info">Current</span></td></tr>
-                    <tr><td>Total Users</td><td>$($statsSummary.TotalUsers)</td><td><span class="badge badge-success">Active</span></td></tr>
-                    <tr><td>Online Users</td><td>$($statsSummary.OnlineUsers)</td><td><span class="badge badge-info">Now</span></td></tr>
-                    <tr><td>Total Messages</td><td>$($statsSummary.TotalMessages)</td><td><span class="badge badge-info">All Time</span></td></tr>
-                    <tr><td>Memory Usage</td><td>$($statsSummary.MemoryUsage)MB</td><td><span class="badge $(if($statsSummary.MemoryUsage -gt 8000){'badge-warning'}else{'badge-success'})">$(if($statsSummary.MemoryUsage -gt 8000){'High'}else{'Normal'})</span></td></tr>
+                    <tr><td>Total Departments</td><td>$($omniSummary.TotalDepartments)</td></tr>
+                    <tr><td>Active Agents</td><td>$($omniSummary.ActiveAgents)</td></tr>
+                    <tr><td>Enabled Features</td><td>$($omniSummary.EnabledFeatures -join ', ')</td></tr>
                 </tbody>
             </table>
-        </div>
 "@
+        } else {
+            $htmlContent += '<p><em>No omnichannel summary data found.</em></p>'
+        }
+    } else {
+        $htmlContent += '<p><em>No omnichannel data found.</em></p>'
     }
+    $htmlContent += '</div>'
+
+    # Always show Apps Analysis section
+    $htmlContent += @"
+    <div class="section">
+        <h2>🧩 Installed Apps & Integrations</h2>
+"@
+    if ($Results.ContainsKey("AppsAnalysis") -and $Results.AppsAnalysis) {
+        $apps = $Results.AppsAnalysis
+        if ($apps.ContainsKey("Summary")) {
+            $appsSummary = $apps.Summary
+            $htmlContent += @"
+            <table>
+                <thead>
+                    <tr><th>App Name</th><th>Version</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    $(foreach ($app in $appsSummary.Apps) { "<tr><td>$($app.Name)</td><td>$($app.Version)</td><td>$($app.Status)</td></tr>" })
+                </tbody>
+            </table>
+"@
+        } else {
+            $htmlContent += '<p><em>No apps summary data found.</em></p>'
+        }
+    } else {
+        $htmlContent += '<p><em>No apps data found.</em></p>'
+    }
+    $htmlContent += '</div>'
 
     # Add top issues section
     if ($allIssues.Count -gt 0) {
