@@ -1,0 +1,9 @@
+# Enforce Unix line endings for shell scripts
+*.sh eol=lf
+
+# Ensure PowerShell scripts use CRLF on Windows
+*.ps1 eol=crlf
+*.psm1 eol=crlf
+
+# Default Git handling for other text files
+* text=auto

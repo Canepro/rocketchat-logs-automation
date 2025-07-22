@@ -73,28 +73,35 @@ usage() {
 RocketChat Support Dump Analyzer - Bash Version
 
 USAGE:
-    $0 [OPTIONS] DUMP_PATH
+    $0 [OPTIONS]
 
 DESCRIPTION:
     Analyzes RocketChat support dumps including logs, settings, statistics,
     Omnichannel configuration, and installed apps.
 
-ARGUMENTS:
-    DUMP_PATH               Path to RocketChat support dump directory or file
-
 OPTIONS:
-    -f, --format FORMAT     Output format: console, json, csv, html (default: console)
-    -s, --severity LEVEL    Minimum severity: info, warning, error, critical (default: info)
-    -o, --output PATH       Export path for reports
-    -c, --config FILE       Custom configuration file path
-    -v, --verbose           Enable verbose output
-    -h, --help              Show this help message
+    -DumpPath, --dump-path PATH         Path to RocketChat support dump directory or file
+    -OutputFormat, --output-format      Output format: console, json, csv, html (default: console)
+    -ExportPath, --export-path PATH     Export path for reports  
+    -Severity, --severity LEVEL         Minimum severity: info, warning, error, critical (default: info)
+    -ConfigFile, --config-file FILE     Custom configuration file path
+    -v, --verbose                       Enable verbose output
+    -h, --help                          Show this help message
+
+    Legacy Options (for backward compatibility):
+    -f, --format FORMAT                 Same as -OutputFormat
+    -o, --output PATH                   Same as -ExportPath
+    -s                                  Same as -Severity
+    -c, --config FILE                   Same as -ConfigFile
 
 EXAMPLES:
-    $0 /path/to/7.8.0-support-dump
+    $0 -DumpPath /path/to/7.8.0-support-dump
+    $0 --dump-path /path/to/dump --output-format html --export-path report.html
+    $0 -DumpPath /path/to/dump -Severity error
+    $0 --dump-path /path/to/dump --config-file custom-rules.json
+    
+    # Backward compatibility (positional dump path still works):
     $0 --format html --output report.html /path/to/dump
-    $0 --severity error /path/to/dump
-    $0 --config custom-rules.json /path/to/dump
 
 REQUIREMENTS:
     - bash 4.0 or later
@@ -1509,7 +1516,38 @@ generate_html_report() {
         .stat-value { font-weight: bold; color: #2c3e50; }
         .recommendations ul { margin-left: 20px; }
         .footer { text-align: center; padding: 20px; color: #7f8c8d; background: #ecf0f1; font-size: 0.9em; }
+        .section-content { display: none; }
+        .section-content.active { display: block; }
+        .section h2 { cursor: pointer; user-select: none; }
+        .section h2:hover { background-color: #f8f9fa; padding: 10px; border-radius: 5px; }
     </style>
+    <script>
+        function toggleSection(element) {
+            var content = element.nextElementSibling;
+            var isActive = content.classList.contains('active');
+            
+            if (isActive) {
+                content.classList.remove('active');
+                element.innerHTML = element.innerHTML.replace('▲', '▼');
+            } else {
+                content.classList.add('active');
+                element.innerHTML = element.innerHTML.replace('▼', '▲');
+            }
+        }
+        
+        // Auto-expand the first few sections by default
+        document.addEventListener('DOMContentLoaded', function() {
+            var sections = document.querySelectorAll('.section-content');
+            // Expand Health Overview and first 2 analysis sections by default
+            for (var i = 0; i < Math.min(3, sections.length); i++) {
+                sections[i].classList.add('active');
+                var header = sections[i].previousElementSibling;
+                if (header && header.innerHTML.includes('▼')) {
+                    header.innerHTML = header.innerHTML.replace('▼', '▲');
+                }
+            }
+        });
+    </script>
 </head>
 <body>
     <div class="container">
@@ -2937,19 +2975,23 @@ main() {
     # Parse command line arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
-            -f|--format)
+            -DumpPath|--dump-path)
+                DUMP_PATH="$2"
+                shift 2
+                ;;
+            -OutputFormat|--output-format|-f|--format)
                 OUTPUT_FORMAT="$2"
                 shift 2
                 ;;
-            -s|--severity)
-                SEVERITY="$2"
-                shift 2
-                ;;
-            -o|--output)
+            -ExportPath|--export-path|-o|--output)
                 EXPORT_PATH="$2"
                 shift 2
                 ;;
-            -c|--config)
+            -Severity|--severity|-s)
+                SEVERITY="$2"
+                shift 2
+                ;;
+            -ConfigFile|--config-file|-c|--config)
                 CONFIG_FILE="$2"
                 shift 2
                 ;;
@@ -2967,7 +3009,10 @@ main() {
                 exit 1
                 ;;
             *)
-                DUMP_PATH="$1"
+                # If no flag specified, treat as dump path for backward compatibility
+                if [[ -z "$DUMP_PATH" ]]; then
+                    DUMP_PATH="$1"
+                fi
                 shift
                 ;;
         esac
