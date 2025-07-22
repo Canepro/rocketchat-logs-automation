@@ -1,6 +1,6 @@
 # 🚀 RocketChat Support Dump Analyzer
 
-**Current Version:** v1.4.7 (2025-07-22)
+**Current Version:** v1.4.8 (2025-07-22)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)

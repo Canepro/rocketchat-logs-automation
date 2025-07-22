@@ -1,5 +1,27 @@
 # Release Notes
 
+## v1.4.8 - 2025-07-22
+### 🔧 Critical Bug Fixes (PR #30)
+- **HTML Interactivity Restored**: Fixed HTML reports to properly open in browser
+- **PowerShell Module Syntax**: Resolved syntax errors in ReportGenerator.psm1
+- **Bash Script Compatibility**: Restored backward compatibility with positional arguments
+- **UTF-8 BOM Support**: Added proper UTF-8 BOM handling for emoji compatibility
+- **Cross-Platform Parity**: Ensured 100% feature parity between PowerShell and Bash versions
+- **Command-Line Arguments**: Standardized argument parsing across both versions
+
+### Technical Details:
+- Fixed missing closing braces in PowerShell modules
+- Restored HTML report interactivity and browser launching
+- Improved error handling and backwards compatibility
+- Enhanced UTF-8 encoding support for special characters
+- Verified through comprehensive cross-platform testing
+
+### Testing:
+- ✅ Cross-platform test suite passes
+- ✅ HTML reports open correctly in browsers
+- ✅ Both PowerShell and Bash versions produce identical results
+- ✅ Backward compatibility maintained for existing scripts
+
 ## v1.4.3 - 2025-07-21
 ### 🧹 Repository Cleanup & Production Readiness
 - **BREAKING CHANGE**: Cleaned up unnecessary files and PRs to maintain clean codebase

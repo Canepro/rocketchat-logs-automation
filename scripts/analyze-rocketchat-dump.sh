@@ -12,7 +12,7 @@ echo "*** CUSTOM DEBUG: Script starting - this proves we're running the right fi
 # Usage: ./analyze-rocketchat-dump.sh [OPTIONS] DUMP_PATH
 #
 # Author: Support Engineering Team
-# Version: 1.4.7
+# Version: 1.4.8
 # Requires: bash 4.0+, jq, grep, awk, sed
 #
 
@@ -2843,7 +2843,7 @@ EOF
                         $(if [[ -n "${DUMP_FILES[apps]:-}" ]]; then echo "✅ Apps"; else echo "❌ Apps"; fi)
                     </p>
                     <p><strong>Generated:</strong> $(date '+%Y-%m-%d %H:%M:%S')</p>
-                    <p><strong>Tool Version:</strong> RocketChat Support Dump Analyzer v1.4.0 (Bash)</p>
+                    <p><strong>Tool Version:</strong> RocketChat Support Dump Analyzer v1.4.8 (Bash)</p>
                 </div>
             </div>
         </div>
