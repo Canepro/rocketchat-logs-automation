@@ -16,6 +16,7 @@ try {
     }
 } catch {
     Write-Warning "Could not import RocketChatAnalyzer module: $($_.Exception.Message)"
+    Throw "Critical error: Failed to import RocketChatAnalyzer module. The script cannot continue."
 }
 
 function Write-ConsoleReport {
