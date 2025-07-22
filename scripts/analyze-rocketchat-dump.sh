@@ -3013,6 +3013,11 @@ main() {
                 # If no flag specified, treat as dump path for backward compatibility
                 if [[ -z "$DUMP_PATH" ]]; then
                     DUMP_PATH="$1"
+                    # Validate that the provided path exists
+                    if [[ ! -e "$DUMP_PATH" ]]; then
+                        log "ERROR" "Invalid dump path: $DUMP_PATH does not exist."
+                        exit 1
+                    fi
                 fi
                 shift
                 ;;
