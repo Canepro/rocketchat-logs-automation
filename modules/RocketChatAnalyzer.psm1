@@ -248,32 +248,44 @@ function Get-SecurityAnalysis {
         switch -Regex ($key) {
             "Accounts_TwoFactorAuthentication_Enabled" {
                 if ($value -eq $false) {
-                    $security.SecurityScore -= 20
-                    $security.SecurityIssues += "Two-factor authentication is disabled"
-                    $security.Recommendations += "Enable two-factor authentication for enhanced security"
+                    $issue = "Two-factor authentication is disabled"
+                    if ($security.SecurityIssues -notcontains $issue) {
+                        $security.SecurityScore -= 20
+                        $security.SecurityIssues += $issue
+                        $security.Recommendations += "Enable two-factor authentication for enhanced security"
+                    }
                     $security.ConfigurationReview[$key].Risk = "High"
                 }
             }
             "Accounts_RegistrationForm" {
                 if ($value -eq "Public") {
-                    $security.SecurityScore -= 10
-                    $security.SecurityIssues += "Public registration is enabled"
-                    $security.Recommendations += "Consider restricting registration to invited users only"
+                    $issue = "Public registration is enabled"
+                    if ($security.SecurityIssues -notcontains $issue) {
+                        $security.SecurityScore -= 10
+                        $security.SecurityIssues += $issue
+                        $security.Recommendations += "Consider restricting registration to invited users only"
+                    }
                     $security.ConfigurationReview[$key].Risk = "Medium"
                 }
             }
             "Accounts_PasswordReset" {
                 if ($value -eq $false) {
-                    $security.SecurityScore -= 5
-                    $security.SecurityIssues += "Password reset is disabled"
+                    $issue = "Password reset is disabled"
+                    if ($security.SecurityIssues -notcontains $issue) {
+                        $security.SecurityScore -= 5
+                        $security.SecurityIssues += $issue
+                    }
                     $security.ConfigurationReview[$key].Risk = "Medium"
                 }
             }
             "FileUpload_Storage_Type" {
                 if ($value -eq "FileSystem") {
-                    $security.SecurityScore -= 5
-                    $security.SecurityIssues += "File uploads stored on filesystem"
-                    $security.Recommendations += "Consider using cloud storage for file uploads"
+                    $issue = "File uploads stored on filesystem"
+                    if ($security.SecurityIssues -notcontains $issue) {
+                        $security.SecurityScore -= 5
+                        $security.SecurityIssues += $issue
+                        $security.Recommendations += "Consider using cloud storage for file uploads"
+                    }
                     $security.ConfigurationReview[$key].Risk = "Low"
                 }
             }
@@ -281,11 +293,13 @@ function Get-SecurityAnalysis {
     }
     }
     
-    # Analyze security-related issues
+    # Analyze security-related issues from log analysis (avoid duplicates)
     $securityIssues = $Issues | Where-Object { $_.Type -eq "Security" }
     foreach ($issue in $securityIssues) {
-        $security.SecurityIssues += $issue.Message
-        $security.SecurityScore -= 5
+        if ($security.SecurityIssues -notcontains $issue.Message) {
+            $security.SecurityIssues += $issue.Message
+            $security.SecurityScore -= 5
+        }
     }
     
     # Ensure score doesn't go below 0

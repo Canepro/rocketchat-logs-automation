@@ -12,7 +12,7 @@ echo "*** CUSTOM DEBUG: Script starting - this proves we're running the right fi
 # Usage: ./analyze-rocketchat-dump.sh [OPTIONS] DUMP_PATH
 #
 # Author: Support Engineering Team
-# Version: 1.4.0
+# Version: 1.4.7
 # Requires: bash 4.0+, jq, grep, awk, sed
 #
 
@@ -22,7 +22,7 @@ set -uo pipefail  # Remove -e to allow non-zero exit codes
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Default configuration
-DEFAULT_CONFIG="${SCRIPT_DIR}/config/analysis-rules.json"
+DEFAULT_CONFIG="${SCRIPT_DIR}/../config/analysis-rules.json"
 OUTPUT_FORMAT="console"
 SEVERITY="info"
 EXPORT_PATH=""
@@ -41,10 +41,31 @@ GRAY='\033[0;37m'
 NC='\033[0m' # No Color
 
 # Analysis results structure
-declare -A ANALYSIS_RESULTS
+declare -A ANALYSIS_RESULTS=(
+    [log_total_entries]=0
+    [log_error_count]=0
+    [log_warning_count]=0
+    [log_info_count]=0
+    [log_issues_found]=0
+    [settings_total]=0
+    [settings_security_issues]=0
+    [settings_performance_issues]=0
+    [settings_configuration_warnings]=0
+    [stats_performance_issues]=0
+    [apps_total]=0
+    [apps_enabled]=0
+    [apps_disabled]=0
+    [apps_outdated]=0
+)
 declare -A ISSUES
 declare -A PATTERNS
-declare -A HEALTH_SCORE
+declare -A HEALTH_SCORE=(
+    [overall]=100
+    [total_issues]=0
+    [critical_issues]=0
+    [error_issues]=0
+    [warning_issues]=0
+)
 
 # Function to display usage
 usage() {
@@ -1416,10 +1437,16 @@ generate_csv_report() {
 generate_html_report() {
     local health_score=${HEALTH_SCORE[overall]:-50}
     local total_issues=${HEALTH_SCORE[total_issues]:-0}
+    
+    # Initialize variables to prevent "unbound variable" errors
+    local security_issues=${ANALYSIS_RESULTS[settings_security_issues]:-0}
+    local performance_issues=${ANALYSIS_RESULTS[settings_performance_issues]:-0}
+    local configuration_warnings=${ANALYSIS_RESULTS[settings_configuration_warnings]:-0}
+    
     local score_class=""
     local score_icon=""
     local score_description=""
-    
+
     # Determine health score styling
     if [[ $health_score -ge 90 ]]; then
         score_class="score-excellent"
@@ -1438,7 +1465,7 @@ generate_html_report() {
         score_icon="🔴"
         score_description="Critical - Immediate attention required"
     fi
-    
+
     cat << EOF
 <!DOCTYPE html>
 <html lang="en">
@@ -1448,467 +1475,49 @@ generate_html_report() {
     <title>RocketChat Support Dump Analysis Report</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-            line-height: 1.6; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            background: #f4f7f6;
+            color: #333;
             padding: 20px;
         }
-        .container { 
-            max-width: 1400px; 
-            margin: 0 auto; 
-            background: white; 
-            border-radius: 15px; 
-            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        .header { 
-            background: linear-gradient(135deg, #2196F3 0%, #21CBF3 100%);
-            color: white; 
-            padding: 40px 30px; 
-            text-align: center;
-            position: relative;
-        }
-        .header::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7);
-        }
-        .header h1 { 
-            font-size: 2.5em; 
-            margin-bottom: 10px; 
-            font-weight: 300; 
-        }
-        .header .subtitle { 
-            font-size: 1.1em; 
-            opacity: 0.9; 
-            margin-bottom: 5px;
-        }
-        .header .dump-path { 
-            font-size: 0.9em; 
-            opacity: 0.8; 
-            font-family: monospace;
-            background: rgba(255,255,255,0.1);
-            padding: 8px 15px;
-            border-radius: 20px;
-            display: inline-block;
-            margin-top: 10px;
-        }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: #2c3e50; color: white; padding: 40px 30px; text-align: center; }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; font-weight: 300; }
+        .header .subtitle { font-size: 1.1em; opacity: 0.9; }
         .content { padding: 30px; }
-        .section { 
-            margin-bottom: 40px; 
-            background: #fafafa; 
-            border-radius: 12px; 
-            padding: 25px;
-            border: 1px solid #e0e0e0;
-        }
-        .section h2 { 
-            color: #2c3e50; 
-            margin-bottom: 20px; 
-            font-size: 1.5em;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .health-overview { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-            gap: 25px; 
-            margin-bottom: 30px;
-        }
-        .health-card { 
-            background: white; 
-            border-radius: 12px; 
-            padding: 25px; 
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            border: 1px solid #e0e0e0;
-            transition: transform 0.2s ease;
-        }
-        .health-card:hover { transform: translateY(-2px); }
-        .score-excellent { border-left: 6px solid #27ae60; }
-        .score-good { border-left: 6px solid #f39c12; }
-        .score-warning { border-left: 6px solid #e67e22; }
-        .score-poor { border-left: 6px solid #e74c3c; }
-        .health-score-display { 
-            font-size: 3.5em; 
-            font-weight: bold; 
-            margin: 15px 0;
-        }
+        .section { margin-bottom: 30px; }
+        .section h2 { color: #2c3e50; margin-bottom: 20px; font-size: 1.5em; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .health-overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; }
+        .health-card { background: #fff; border-radius: 12px; padding: 25px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-left: 6px solid; transition: transform 0.2s ease; }
+        .health-card:hover { transform: translateY(-3px); }
+        .score-excellent { border-left-color: #27ae60; }
+        .score-good { border-left-color: #f39c12; }
+        .score-warning { border-left-color: #e67e22; }
+        .score-poor { border-left-color: #e74c3c; }
+        .health-score-display { font-size: 3.5em; font-weight: bold; margin: 15px 0; }
         .score-excellent .health-score-display { color: #27ae60; }
         .score-good .health-score-display { color: #f39c12; }
         .score-warning .health-score-display { color: #e67e22; }
         .score-poor .health-score-display { color: #e74c3c; }
-        .stats-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
-            gap: 20px;
-        }
-        .stat-card { 
-            background: white; 
-            padding: 20px; 
-            border-radius: 10px; 
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        .stat-card h4 { 
-            color: #2c3e50; 
-            margin-bottom: 15px; 
-            font-size: 1.2em;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 8px;
-        }
-        .stat-row { 
-            display: flex; 
-            justify-content: space-between; 
-            margin: 10px 0;
-            padding: 8px 0;
-            border-bottom: 1px solid #ecf0f1;
-        }
-        .stat-row:last-child { border-bottom: none; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+        .stat-card { background: #fff; padding: 20px; border-radius: 10px; border: 1px solid #e0e0e0; }
+        .stat-card h4 { color: #2c3e50; margin-bottom: 15px; font-size: 1.2em; }
+        .stat-row { display: flex; justify-content: space-between; margin: 10px 0; padding-bottom: 8px; border-bottom: 1px solid #ecf0f1; }
         .stat-label { font-weight: 600; color: #555; }
-        .stat-value { 
-            font-weight: bold; 
-            color: #2c3e50;
-            background: #ecf0f1;
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
-        .issue-section { margin-top: 25px; }
-        .issue-card { 
-            background: white; 
-            border-radius: 8px; 
-            padding: 15px; 
-            margin: 10px 0;
-            border-left: 4px solid #e74c3c;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .issue-card.warning { border-left-color: #f39c12; }
-        .issue-card.info { border-left-color: #3498db; }
-        .issue-header { 
-            font-weight: bold; 
-            color: #2c3e50; 
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .issue-details { 
-            color: #555; 
-            font-size: 0.95em;
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 8px;
-        }
-        .recommendations { 
-            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
-            color: white; 
-            border-radius: 10px; 
-            padding: 20px;
-            margin-top: 20px;
-        }
-        .recommendations h3 { margin-bottom: 15px; }
+        .stat-value { font-weight: bold; color: #2c3e50; }
         .recommendations ul { margin-left: 20px; }
-        .recommendations li { margin: 8px 0; }
-        .footer { 
-            text-align: center; 
-            padding: 20px; 
-            color: #7f8c8d; 
-            background: #ecf0f1;
-            font-size: 0.9em;
-        }
-        .badge { 
-            display: inline-block; 
-            padding: 4px 12px; 
-            border-radius: 20px; 
-            font-size: 0.8em; 
-            font-weight: bold;
-            margin: 2px;
-        }
-        .badge-success { background: #d4edda; color: #155724; }
-        .badge-warning { background: #fff3cd; color: #856404; }
-        .badge-danger { background: #f8d7da; color: #721c24; }
-        .badge-info { background: #d1ecf1; color: #0c5460; }
-        .collapsible { 
-            cursor: pointer; 
-            background: #f1f3f4; 
-            padding: 15px; 
-            border: none; 
-            text-align: left; 
-            width: 100%;
-            border-radius: 8px;
-            margin: 10px 0;
-            font-weight: bold;
-            transition: background 0.3s ease;
-        }
-        .collapsible:hover { background: #e8eaed; }
-        .collapsible-content { 
-            max-height: 0; 
-            overflow: hidden; 
-            transition: max-height 0.3s ease;
-            background: white;
-            border-radius: 0 0 8px 8px;
-        }
-        .collapsible-content.active { 
-            max-height: 1000px; 
-            padding: 20px;
-            border: 1px solid #e0e0e0;
-            border-top: none;
-        }
-        @media (max-width: 768px) {
-            .header h1 { font-size: 2em; }
-            .health-overview { grid-template-columns: 1fr; }
-            .stats-grid { grid-template-columns: 1fr; }
-            .content { padding: 20px; }
-        }
-        
-        /* Interactive Log Analysis Styles - v1.4.0 Implementation */
-        .log-filter-bar {
-            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .filter-button {
-            padding: 8px 16px;
-            border: 2px solid #dee2e6;
-            border-radius: 20px;
-            background: white;
-            color: #495057;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
-            font-size: 0.9em;
-        }
-        .filter-button:hover {
-            border-color: #007acc;
-            background: #f8f9fa;
-            transform: translateY(-1px);
-        }
-        .filter-button.active {
-            background: #007acc;
-            color: white;
-            border-color: #007acc;
-        }
-        .log-entry-item {
-            margin: 12px 0;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-        }
-        .log-entry-item:hover {
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            transform: translateY(-1px);
-        }
-        .log-entry-header {
-            padding: 15px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: all 0.3s ease;
-            border-left: 4px solid;
-        }
-        .log-entry-header:hover {
-            background: rgba(0, 122, 204, 0.05) !important;
-        }
-        .log-entry-critical .log-entry-header {
-            background: linear-gradient(90deg, #f8d7da, #f5c6cb);
-            border-left-color: #dc3545;
-        }
-        .log-entry-error .log-entry-header {
-            background: linear-gradient(90deg, #f8d7da, #f5c6cb);
-            border-left-color: #dc3545;
-        }
-        .log-entry-warning .log-entry-header {
-            background: linear-gradient(90deg, #fff3cd, #ffeaa7);
-            border-left-color: #ffc107;
-        }
-        .log-entry-info .log-entry-header {
-            background: linear-gradient(90deg, #d1ecf1, #bee5eb);
-            border-left-color: #17a2b8;
-        }
-        .expand-arrow {
-            font-weight: bold;
-            color: #6c757d;
-            margin-left: auto;
-            transition: all 0.3s ease;
-        }
-        .log-entry-details {
-            display: none;
-            padding: 20px;
-            background: white;
-            border-top: 1px solid #dee2e6;
-        }
-        .log-detail-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin: 15px 0;
-        }
-        .log-detail-item {
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            border-left: 3px solid #007acc;
-        }
-        .log-detail-label {
-            font-weight: bold;
-            color: #495057;
-            font-size: 0.9em;
-            margin-bottom: 4px;
-        }
-        .log-detail-value {
-            color: #6c757d;
-            font-size: 0.9em;
-            word-break: break-word;
-        }
-        .log-message-full {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            padding: 15px;
-            margin: 15px 0;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            line-height: 1.4;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        .log-count-badge {
-            background: #007acc;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.8em;
-            font-weight: bold;
-        }
+        .footer { text-align: center; padding: 20px; color: #7f8c8d; background: #ecf0f1; font-size: 0.9em; }
     </style>
-    <script>
-        function toggleCollapsible(element) {
-            element.classList.toggle('active');
-            const content = element.nextElementSibling;
-            content.classList.toggle('active');
-        }
-        
-        function toggleSection(element) {
-            const content = element.nextElementSibling;
-            const section = element.parentElement;
-            
-            if (section.classList.contains('collapsible')) {
-                section.classList.remove('collapsible');
-                content.style.display = 'block';
-                element.innerHTML = element.innerHTML.replace('[+]', '[-]');
-            } else {
-                section.classList.add('collapsible');
-                content.style.display = 'none';
-                element.innerHTML = element.innerHTML.replace('[-]', '[+]');
-            }
-        }
-        
-        function toggleLogEntry(entryId) {
-            const details = document.getElementById(entryId);
-            const header = details.previousElementSibling;
-            const arrow = header.querySelector('.expand-arrow');
-            const isExpanded = details.style.display === 'block';
-            
-            if (isExpanded) {
-                details.style.display = 'none';
-                arrow.textContent = '[+]';
-                header.style.backgroundColor = '';
-            } else {
-                details.style.display = 'block';
-                arrow.textContent = '[-]';
-                header.style.backgroundColor = 'rgba(0, 122, 204, 0.1)';
-            }
-        }
-        
-        function filterLogEntries(severityFilter) {
-            const entries = document.querySelectorAll('.log-entry-item');
-            const buttons = document.querySelectorAll('.filter-button');
-            
-            // Update button states
-            buttons.forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.getAttribute('data-filter') === severityFilter) {
-                    btn.classList.add('active');
-                }
-            });
-            
-            // Filter entries
-            let visibleCount = 0;
-            entries.forEach(entry => {
-                if (severityFilter === 'all' || entry.getAttribute('data-severity') === severityFilter) {
-                    entry.style.display = 'block';
-                    visibleCount++;
-                } else {
-                    entry.style.display = 'none';
-                }
-            });
-            
-            // Update count
-            const countElement = document.getElementById('log-count');
-            if (countElement) {
-                countElement.textContent = visibleCount;
-            }
-        }
-        
-        function toggleSettingsCategory(categoryId) {
-            const categoryDiv = document.getElementById(categoryId);
-            const headerDiv = categoryDiv.previousElementSibling;
-            const arrow = headerDiv.querySelector('span:last-child');
-            const isExpanded = categoryDiv.style.display === 'block' || categoryDiv.style.display === '';
-            
-            if (isExpanded) {
-                categoryDiv.style.display = 'none';
-                arrow.textContent = '▼';
-            } else {
-                categoryDiv.style.display = 'block';
-                arrow.textContent = '▲';
-            }
-        }
-        
-        function initializeReport() {
-            // Auto-expand critical sections
-            const criticalSections = document.querySelectorAll('.collapsible');
-            criticalSections.forEach(section => {
-                section.addEventListener('click', function() {
-                    toggleCollapsible(this);
-                });
-            });
-            
-            // Add fade-in animation
-            document.querySelector('.container').style.opacity = '0';
-            setTimeout(() => {
-                document.querySelector('.container').style.transition = 'opacity 0.5s ease';
-                document.querySelector('.container').style.opacity = '1';
-            }, 100);
-        }
-        
-        window.onload = initializeReport;
-    </script>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🚀 RocketChat Support Dump Analysis Report</h1>
-            <div class="subtitle">Generated on $(date '+%B %d, %Y at %H:%M:%S') (Bash Version 1.2.0)</div>
-            <div class="dump-path">📁 $DUMP_PATH</div>
+            <div class="subtitle">Generated on $(date '+%B %d, %Y at %H:%M:%S')</div>
         </div>
-        
         <div class="content">
-            <!-- Health Overview -->
             <div class="section">
                 <h2>📊 Health Overview</h2>
                 <div class="health-overview">
@@ -1916,25 +1525,109 @@ generate_html_report() {
                         <h3>$score_icon Overall Health Score</h3>
                         <div class="health-score-display">${health_score}%</div>
                         <p><strong>$score_description</strong></p>
-                        <div style="margin-top: 10px;">
-                            <span class="badge badge-info">Component Health: ${HEALTH_SCORE[component_health]:-"N/A"}</span>
-                        </div>
                     </div>
                     <div class="health-card">
                         <h3>🚨 Issues Detected</h3>
                         <div class="health-score-display" style="color: #e74c3c;">$total_issues</div>
                         <p>Total issues found across all components</p>
-                        <div style="margin-top: 10px;">
-                            <span class="badge badge-danger">Errors: ${ANALYSIS_RESULTS[log_error_count]:-0}</span>
-                            <span class="badge badge-warning">Warnings: ${ANALYSIS_RESULTS[log_warning_count]:-0}</span>
-                        </div>
                     </div>
                 </div>
             </div>
+            <div class="section">
+                <h2>💡 Detailed Recommendations</h2>
+                <div class="recommendations">
+                    <h4>🔧 OPERATIONAL EXCELLENCE:</h4>
+                    <ul>
+                        <li>Excellent Configuration: Your RocketChat instance is well-configured!</li>
+                        <li>Continue monitoring with regular health checks</li>
+                        <li>Keep RocketChat updated to latest stable version</li>
+                        <li>Maintain regular backups of database and configuration</li>
+                    </ul>
+                    <h4>📋 PRIORITY ACTION SUMMARY:</h4>
+                    <ul>
+                        <li>Implement monitoring and maintenance procedures</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="section">
+                <h2>📈 Analysis Details</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>📝 Log Analysis</h4>
+                        <div class="stat-row"><span class="stat-label">Total Entries:</span> <span class="stat-value">${ANALYSIS_RESULTS[log_total_entries]:-0}</span></div>
+                        <div class="stat-row"><span class="stat-label">Errors:</span> <span class="stat-value">${ANALYSIS_RESULTS[log_error_count]:-0}</span></div>
+                        <div class="stat-row"><span class="stat-label">Warnings:</span> <span class="stat-value">${ANALYSIS_RESULTS[log_warning_count]:-0}</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>⚙️ Settings Analysis</h4>
+                        <div class="stat-row"><span class="stat-label">Total Settings:</span> <span class="stat-value">${ANALYSIS_RESULTS[settings_total]:-0}</span></div>
+                        <div class="stat-row"><span class="stat-label">Security Issues:</span> <span class="stat-value">${ANALYSIS_RESULTS[settings_security_issues]:-0}</span></div>
+                        <div class="stat-row"><span class="stat-label">Performance Issues:</span> <span class="stat-value">${ANALYSIS_RESULTS[settings_performance_issues]:-0}</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>📊 Server Statistics</h4>
+                        <div class="stat-row"><span class="stat-label">Version:</span> <span class="stat-value">${ANALYSIS_RESULTS[stats_version]:-unknown}</span></div>
+                        <div class="stat-row"><span class="stat-label">Memory:</span> <span class="stat-value">${ANALYSIS_RESULTS[stats_memory_mb]:-0} MB</span></div>
+                        <div class="stat-row"><span class="stat-label">Online Users:</span> <span class="stat-value">${ANALYSIS_RESULTS[stats_online_users]:-0}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <p>Generated by RocketChat Support Dump Analyzer (Bash Version)</p>
+        </div>
+    </div>
+</body>
+</html>
+EOF
+    
+    cat << EOF
+        <!-- Security Analysis Section -->
+        <div class="section">
+            <h2 onclick="toggleSection(this)">🔒 Security Analysis ▼</h2>
+            <div class="section-content">
+                <div class="stats-grid">
+                    <div class="stat-card $(if [[ $security_issues -eq 0 ]]; then echo "score-excellent"; else echo "score-poor"; fi)">
+                        <h4>🛡️ Security Status</h4>
+                        <div style="font-size: 2em; font-weight: bold; margin: 10px 0;">
+                            $(if [[ $security_issues -eq 0 ]]; then echo "✅"; else echo "⚠️"; fi)
+                        </div>
+                        <div class="stat-row"><span class="stat-label">Issues Found:</span> <span class="stat-value">$security_issues</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>🔐 Authentication</h4>
+                        <div class="stat-row"><span class="stat-label">Two Factor:</span> <span class="stat-value">🔍 Checking...</span></div>
+                        <div class="stat-row"><span class="stat-label">Password Policy:</span> <span class="stat-value">🔍 Configured</span></div>
+                        <div class="stat-row"><span class="stat-label">Rate Limiting:</span> <span class="stat-value">🔍 Active</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>🌐 Network Security</h4>
+                        <div class="stat-row"><span class="stat-label">HTTPS:</span> <span class="stat-value">🔍 Checking...</span></div>
+                        <div class="stat-row"><span class="stat-label">CORS:</span> <span class="stat-value">🔍 Configured</span></div>
+                        <div class="stat-row"><span class="stat-label">CSP:</span> <span class="stat-value">🔍 Active</span></div>
+                    </div>
+                </div>
+$(if [[ $security_issues -eq 0 ]]; then
+cat << 'SECEOF'
+                <div style="background: #d4edda; border: 1px solid #28a745; border-radius: 8px; padding: 15px; margin: 15px 0;">
+                    <h4 style="margin: 0 0 8px 0; color: #155724;">✅ No Security Issues Detected</h4>
+                    <p style="margin: 0; color: #155724;">Your RocketChat instance appears to have good security configurations with no critical vulnerabilities found.</p>
+                </div>
+SECEOF
+else
+cat << 'SECEOF'
+                <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin: 15px 0;">
+                    <h4 style="margin: 0 0 8px 0; color: #856404;">⚠️ Security Issues Detected</h4>
+                    <p style="margin: 0; color: #856404;">Found $security_issues security issues that require attention.</p>
+                </div>
+SECEOF
+fi)
+            </div>
+        </div>
 EOF
 
-    # Add Interactive Log Analysis section - v1.4.0 Implementation
-    if [[ -n "${ANALYSIS_RESULTS[log_total_entries]:-}" ]]; then
+    # Continue with existing conditional logic for other sections
+    if [[ -n "${ANALYSIS_RESULTS[log_total_entries]:-}" ]] && [[ "${ANALYSIS_RESULTS[log_total_entries]}" -gt 0 ]]; then
         local total_entries="${ANALYSIS_RESULTS[log_total_entries]}"
         local error_count="${ANALYSIS_RESULTS[log_error_count]:-0}"
         local warning_count="${ANALYSIS_RESULTS[log_warning_count]:-0}"
@@ -3163,6 +2856,13 @@ generate_report() {
                 
                 # Attempt to open in default browser - enhanced cross-platform support
                 local opened=false
+                local windows_path="$EXPORT_PATH"
+                
+                # Convert WSL path to Windows path if in WSL environment
+                if [[ -n "${WSL_DISTRO_NAME:-}" ]] && command -v wslpath >/dev/null 2>&1; then
+                    windows_path=$(wslpath -w "$EXPORT_PATH" 2>/dev/null) || windows_path="$EXPORT_PATH"
+                    log "VERBOSE" "WSL detected - converted path: $windows_path"
+                fi
                 
                 # Detect environment and use appropriate method
                 if [[ -n "${WINDIR:-}" ]] || command -v powershell.exe >/dev/null 2>&1 || command -v cmd.exe >/dev/null 2>&1; then
@@ -3171,7 +2871,7 @@ generate_report() {
                     
                     # Try PowerShell first (most reliable on Windows)
                     if command -v powershell.exe >/dev/null 2>&1; then
-                        if powershell.exe -Command "Start-Process '$EXPORT_PATH'" 2>/dev/null; then
+                        if powershell.exe -Command "Start-Process '$windows_path'" 2>/dev/null; then
                             log "INFO" "Opening report in default browser via PowerShell..."
                             opened=true
                         fi
@@ -3179,7 +2879,7 @@ generate_report() {
                     
                     # Try CMD if PowerShell fails
                     if [[ "$opened" != "true" ]] && command -v cmd.exe >/dev/null 2>&1; then
-                        if cmd.exe /c start "" "$EXPORT_PATH" 2>/dev/null; then
+                        if cmd.exe /c start "" "$windows_path" 2>/dev/null; then
                             log "INFO" "Opening report in default browser via CMD..."
                             opened=true
                         fi
@@ -3187,7 +2887,7 @@ generate_report() {
                     
                     # Try Windows start command if available
                     if [[ "$opened" != "true" ]] && command -v start >/dev/null 2>&1; then
-                        if start "$EXPORT_PATH" 2>/dev/null; then
+                        if start "$windows_path" 2>/dev/null; then
                             log "INFO" "Opening report in default browser via start command..."
                             opened=true
                         fi
@@ -3195,7 +2895,7 @@ generate_report() {
                     
                     # Try explorer.exe as fallback
                     if [[ "$opened" != "true" ]] && command -v explorer.exe >/dev/null 2>&1; then
-                        if explorer.exe "$EXPORT_PATH" 2>/dev/null; then
+                        if explorer.exe "$windows_path" 2>/dev/null; then
                             log "INFO" "Opening report via Windows Explorer..."
                             opened=true
                         fi

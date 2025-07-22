@@ -1,0 +1,128 @@
+{
+  "healthScore": {
+    "ComponentScores": {
+      "Settings": 90,
+      "Logs": 100,
+      "Performance": 100,
+      "Security": 100
+    },
+    "Recommendations": "Excellent: System is running optimally",
+    "OverallScore": 95,
+    "Issues": {
+      "Critical": 0,
+      "Warning": 1,
+      "Error": 0,
+      "Info": 0
+    }
+  },
+  "summary": {
+    "WarningIssues": 0,
+    "CriticalIssues": 0,
+    "TotalIssues": 1,
+    "InfoIssues": 0,
+    "ErrorIssues": 0
+  },
+  "analysis": {
+    "settings": {
+      "Settings": {
+        "FileUpload_Enabled": true,
+        "SAML_Custom_Default_issuer": "https://rocketchat.example.com",
+        "LDAP_Enable": false,
+        "Message_MaxAllowedSize": 5000,
+        "API_Enable_Rate_Limiter": true,
+        "Site_Name": "Company RocketChat",
+        "Accounts_TwoFactorAuthentication_Enabled": false,
+        "API_User_Limit": 100,
+        "Accounts_Password_Policy_Enabled": true
+      },
+      "SecuritySettings": {
+        "LDAP_Enable": false,
+        "SAML_Custom_Default_issuer": "https://rocketchat.example.com",
+        "Accounts_TwoFactorAuthentication_Enabled": false,
+        "Accounts_Password_Policy_Enabled": true
+      },
+      "PerformanceSettings": {
+        "API_Enable_Rate_Limiter": true,
+        "Message_MaxAllowedSize": 5000,
+        "API_User_Limit": 100
+      },
+      "Issues": {
+        "Value": false,
+        "Severity": "Warning",
+        "Message": "Two-factor authentication is disabled",
+        "Type": "Security",
+        "Setting": "Accounts_TwoFactorAuthentication_Enabled"
+      }
+    },
+    "logs": {
+      "Summary": {
+        "InfoCount": 1,
+        "TotalEntries": 1,
+        "WarningCount": 0,
+        "ErrorCount": 0
+      },
+      "Patterns": {},
+      "TimeRange": {
+        "End": null,
+        "Start": null
+      },
+      "Issues": null
+    },
+    "apps": {},
+    "omnichannel": {},
+    "statistics": {
+      "PerformanceMetrics": {},
+      "ResourceUsage": {},
+      "ServerInfo": {},
+      "Issues": null
+    }
+  },
+  "metadata": {
+    "dumpPath": "test-dump\\standard-dump.json",
+    "generatedAt": "2025-07-22T00:33:25Z",
+    "version": "1.0.0",
+    "reportType": "RocketChat Support Dump Analysis"
+  },
+  "insights": {
+    "errorPatterns": {},
+    "security": {
+      "SecurityScore": 80,
+      "SecurityIssues": "Two-factor authentication is disabled",
+      "Recommendations": "Enable two-factor authentication for enhanced security",
+      "ConfigurationReview": {
+        "LDAP_Enable": {
+          "Description": "",
+          "Value": false,
+          "Risk": "Low"
+        },
+        "SAML_Custom_Default_issuer": {
+          "Description": "",
+          "Value": "https://rocketchat.example.com",
+          "Risk": "Low"
+        },
+        "Accounts_TwoFactorAuthentication_Enabled": {
+          "Description": "",
+          "Value": false,
+          "Risk": "High"
+        },
+        "Accounts_Password_Policy_Enabled": {
+          "Description": "",
+          "Value": true,
+          "Risk": "Low"
+        }
+      }
+    },
+    "performance": {
+      "Recommendations": null,
+      "UserLoadAnalysis": {},
+      "MessageVolumeAnalysis": {},
+      "MemoryAnalysis": {}
+    },
+    "trends": {
+      "DailyDistribution": {},
+      "WarningTrend": {},
+      "HourlyDistribution": {},
+      "ErrorTrend": {}
+    }
+  }
+}

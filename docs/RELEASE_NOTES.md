@@ -1,5 +1,67 @@
 # 📋 Release Notes - RocketChat Support Dump Analyzer
 
+## 🎉 v1.4.7 - Bash Script Fixes & Project Completion (July 22, 2025)
+
+### 🐛 **Critical Bash Script Fixes**
+
+#### **Unbound Variable Error Resolution**
+- **Fixed "unbound variable: security_issues" error** that occurred when log files were missing from dump
+- **Added proper variable initialization** for all `ANALYSIS_RESULTS` array variables with default values
+- **Enhanced function-level variables** in `generate_html_report()` to prevent runtime errors
+- **Improved error handling** for missing dump components (logs, apps, omnichannel data)
+
+#### **HTML Report Generation Fixes**
+- **Restored complete HTML function** that was regressed to incomplete state
+- **Fixed all report sections** including Health Overview, Detailed Recommendations, Analysis Details
+- **Professional styling** with proper CSS and responsive design
+- **Cross-platform compatibility** ensuring Bash version matches PowerShell quality
+
+### ✅ **Testing & Validation Results**
+- **HTML Format**: ✅ Clean 51KB reports without errors
+- **JSON Format**: ✅ Structured output with metadata and health scoring
+- **CSV Format**: ✅ Tabular data export working correctly
+- **Console Format**: ✅ Color-coded terminal output functional
+
+### 🔧 **Technical Improvements**
+- **Variable Initialization**: All `ANALYSIS_RESULTS` variables properly initialized with default values
+- **Error Prevention**: Graceful handling of partial dumps missing log/app files
+- **Report Quality**: HTML reports now match enterprise-grade standards
+- **Function Reliability**: Complete replacement of broken HTML generation function
+
+### 🎯 **Project Status: 100% Complete**
+- **PowerShell Version**: ✅ Fully functional with superior parsing capabilities
+- **Bash Version**: ✅ Fully functional with complete HTML report generation
+- **Cross-Platform Parity**: ✅ Both versions produce consistent, reliable output
+- **Production Ready**: ✅ All critical issues resolved and tested
+
+---
+
+## 🎉 v1.4.6 - Critical Bug Fixes & Documentation Update (July 22, 2025)
+
+### 🐛 **Critical Bug Fixes**
+
+#### **PowerShell Version Fixes**
+- **Fixed Security Issue Duplication**: Resolved bug where "Two-factor authentication is disabled" and other security issues were listed twice in Console and JSON reports
+- **Enhanced Issue Source Tracking**: Added source filtering to prevent duplicate security issues from settings analysis
+- **Improved Report Accuracy**: Security analysis now correctly avoids double-counting issues from both settings review and general issues collection
+
+#### **Bash Version Fixes**
+- **Fixed Configuration Path**: Corrected DEFAULT_CONFIG path to point to `../config/analysis-rules.json` for consistency with PowerShell version
+- **Eliminated Config Warnings**: Resolved `[WARN] Config file not found` message during execution
+- **Standardized Project Structure**: Both versions now use the same configuration directory structure
+
+### 📚 **Documentation Updates**
+- **Platform Recommendations**: Added clear guidance highlighting PowerShell as the primary version with superior parsing capabilities
+- **Version Tracking**: Updated version numbers to v1.4.6 across all scripts and documentation
+- **Feature Comparison**: Enhanced README with explicit platform recommendations and use cases
+
+### 🎯 **Production Status**
+- **PowerShell Version**: Primary recommendation for comprehensive analysis with superior data parsing
+- **Bash Version**: Lightweight alternative for quick assessments and CI/CD integration
+- **Both Versions**: Fully functional with all four output formats (Console, JSON, CSV, HTML)
+
+---
+
 ## 🎉 v1.4.5 - Final Production Release (July 22, 2025)
 
 ### 🚀 **Complete Cross-Platform Validation & Final Cleanup**

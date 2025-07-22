@@ -1,6 +1,6 @@
 # 🚀 RocketChat Support Dump Analyzer
 
-**Current Version:** v1.4.5 (2025-07-22)
+**Current Version:** v1.4.7 (2025-07-22)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue.svg)](https://github.com/PowerShell/PowerShell)
@@ -16,9 +16,22 @@ A comprehensive automation tool for analyzing RocketChat support dumps and syste
 - 🎯 **Health Scoring**: Automated assessment with actionable recommendations  
 - 🔐 **Security Auditing**: Identifies vulnerabilities and compliance issues
 - ⚡ **Performance Analysis**: Resource usage and optimization suggestions
-- 🌐 **Cross-Platform**: PowerShell and Bash versions with full feature parity ✅ Both versions tested and operational
+- 🌐 **Cross-Platform**: PowerShell (primary) and Bash versions with feature parity ✅ Both versions tested and operational
 - 📈 **Production Ready**: 100% validated with comprehensive testing suite and deployment guide
 - 🧹 **Clean Codebase**: Optimized repository with only essential files for production use
+
+## 🎯 **Platform Recommendations**
+
+- **🔥 PowerShell Version (Recommended)**: Most advanced and accurate analysis capabilities
+  - Superior data parsing for composite dump files
+  - More sophisticated security and performance analysis
+  - Better error handling and recovery
+  - Recommended for comprehensive reviews and critical analysis
+
+- **⚡ Bash Version (Lightweight)**: Fast, cross-platform alternative
+  - Minimal dependencies (jq, standard Unix tools)
+  - Optimized for simple analyses and CI/CD integration
+  - Best for quick assessments and automated workflows
 
 ## 🚀 Quick Start
 

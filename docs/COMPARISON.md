@@ -1,42 +1,75 @@
 # PowerShell vs Bash Implementation Comparison
 
+## ⚠️ **Current Status Update (v1.4.6)**
+
+**PowerShell Version: PRIMARY RECOMMENDATION** 🏆
+- Superior data parsing for composite dump files
+- More accurate issue detection and analysis
+- Recommended for comprehensive reviews and critical analysis
+
+**Bash Version: LIGHTWEIGHT ALTERNATIVE** ⚡
+- Works well for simple individual dump files
+- Known parsing limitations with composite dump files
+- Best for quick assessments and CI/CD integration
+
 ## Feature Parity Matrix
 
-| Feature | PowerShell | Bash | Notes |
-|---------|------------|------|-------|
+| Feature | PowerShell | Bash | Status |
+|---------|------------|------|--------|
+| **Data Parsing** | | | |
+| Individual Dump Files | ✅ | ✅ | Both work well |
+| Composite Dump Files | ✅ | ❌ | **PowerShell superior** |
+| **Analysis Features** | | | |
 | Log Analysis | ✅ | ✅ | Full pattern detection |
-| Settings Analysis | ✅ | ✅ | Security and performance review |
-| Statistics Analysis | ✅ | ✅ | Memory, users, messages |
-| Health Scoring | ✅ | ✅ | Overall system health percentage |
+| Settings Analysis | ✅ | ⚠️ | PowerShell more accurate |
+| Statistics Analysis | ✅ | ⚠️ | PowerShell more accurate |
+| Health Scoring | ✅ | ⚠️ | PowerShell more accurate |
+| Security Analysis | ✅ | ⚠️ | PowerShell more comprehensive |
+| **Output Formats** | | | |
 | Console Output | ✅ | ✅ | Color-coded, formatted |
 | JSON Export | ✅ | ✅ | Structured data export |
 | CSV Export | ✅ | ✅ | Spreadsheet-compatible |
 | HTML Reports | ✅ | ✅ | Professional presentation |
+| **Advanced Features** | | | |
 | Error Patterns | ✅ | ✅ | Configurable via JSON |
 | Trend Analysis | ✅ | ⚠️ | PowerShell version more advanced |
-| Security Analysis | ✅ | ✅ | Configuration review |
-| Performance Insights | ✅ | ✅ | Threshold-based analysis |
+| Performance Insights | ✅ | ⚠️ | PowerShell more detailed |
+| **Configuration** | | | |
 | Verbose Logging | ✅ | ✅ | Detailed operation info |
 | Custom Config | ✅ | ✅ | JSON-based configuration |
-| Batch Processing | ✅ | ✅ | Multiple dump analysis |
+| Configuration Path | ✅ | ✅ | **Fixed in v1.4.6** |
 
 ## When to Use Which Version
 
-### PowerShell Version - Best For:
+### PowerShell Version - RECOMMENDED 🏆
+- **Primary Choice**: Most accurate and comprehensive analysis
+- **Composite Dump Files**: Only version that correctly parses complex dump structures
+- **Security Analysis**: Superior detection of configuration issues
 - **Windows Environments**: Native integration with Windows systems
-- **Advanced Analytics**: More sophisticated pattern analysis and trending
-- **PowerShell Workflows**: Integration with existing PowerShell automation
-- **Enterprise Windows**: Better integration with Windows-centric tools
+- **Enterprise Analysis**: Comprehensive reporting for critical systems
+- **Advanced Analytics**: Sophisticated pattern analysis and trending
 - **Detailed Reporting**: More advanced HTML report generation
-- **Object-Based Processing**: PowerShell's object pipeline advantages
 
-### Bash Version - Best For:
-- **Linux/Unix Environments**: Native on most Linux distributions
-- **Container Deployments**: Lightweight, minimal dependencies
-- **CI/CD Pipelines**: Better integration with most DevOps tools
-- **Cross-Platform**: Works consistently across Linux, macOS, WSL
-- **Shell Scripting**: Easy integration with existing bash automation
-- **Performance**: Generally faster for large file processing
+### Bash Version - LIGHTWEIGHT ALTERNATIVE ⚡
+- **Simple Dump Files**: Works well for individual dump file analysis
+- **CI/CD Pipelines**: Minimal dependencies, fast execution
+- **Container Deployments**: Lightweight, smaller footprint
+- **Quick Assessments**: Fast health checks and basic analysis
+- **Linux/Unix Environments**: Native on most distributions
+- **Known Limitations**: ⚠️ Cannot properly parse composite dump files
+
+## Current Known Issues (v1.4.6)
+
+### Bash Version Limitations
+- **Critical**: Fails to parse composite dump files like `standard-dump.json`
+- **Impact**: Shows 100% health score when issues exist
+- **Workaround**: Use individual dump files (e.g., `7.8.0-settings.json`) or PowerShell version
+- **Status**: Under investigation for future versions
+
+### PowerShell Version Status
+- **✅ All Issues Fixed**: Security issue duplication resolved in v1.4.6
+- **✅ Fully Functional**: Correctly processes all dump file types
+- **✅ Production Ready**: Recommended for all critical analysis work
 
 ## Performance Characteristics
 
