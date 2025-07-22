@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Report Generator Module - Functions for generating various report formats.
 .DESCRIPTION
@@ -16,6 +16,7 @@ try {
     }
 } catch {
     Write-Warning "Could not import RocketChatAnalyzer module: $($_.Exception.Message)"
+}
 
 function Write-ConsoleReport {
     <#
@@ -1761,7 +1762,6 @@ $(foreach ($issue in @($securityAnalysis.SecurityIssues)) {
 "@
 
     return $html
-}
 }
 Export-ModuleMember -Function Write-ConsoleReport, New-JSONReport, New-CSVReport, New-HTMLReport
 

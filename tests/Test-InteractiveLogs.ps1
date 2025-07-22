@@ -1,4 +1,4 @@
-# Test Script for Interactive Log Analysis - Issue #13
+﻿# Test Script for Interactive Log Analysis - Issue #13
 # Tests both Windows PowerShell 5.1 and PowerShell Core 7.x compatibility
 
 param(

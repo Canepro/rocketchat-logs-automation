@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Quick test script for RocketChat Dump Analyzer
 
