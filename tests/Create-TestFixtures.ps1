@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Creates test fixtures for RocketChat Log Analyzer testing (Simplified Version)
 

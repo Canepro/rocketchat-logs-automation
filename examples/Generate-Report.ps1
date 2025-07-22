@@ -1,4 +1,4 @@
-# RocketChat Log Analyzer - Easy Report Generator
+﻿# RocketChat Log Analyzer - Easy Report Generator
 # This PowerShell script generates HTML reports and saves them to your Downloads folder
 
 param(
