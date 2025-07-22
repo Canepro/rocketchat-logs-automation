@@ -28,6 +28,7 @@ SEVERITY="info"
 EXPORT_PATH=""
 CONFIG_FILE="$DEFAULT_CONFIG"
 VERBOSE=false
+DUMP_PATH=""
 
 # Colors for output
 RED='\033[0;31m'
